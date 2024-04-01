@@ -1,0 +1,6 @@
+
+p5js-osc/node_modules
+p5js-osc/node_modules/*
+p5js-osc/node_modules/.DS_Store
+p5js-osc/.DS_Store
+.DS_Store
