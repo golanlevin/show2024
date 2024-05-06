@@ -25,35 +25,10 @@ npx electron-forge import
 npm run make
 ```
 
+#### More information 
 
+https://chatgpt.com/c/1e6fbf6d-7c1d-4049-b4f9-7b7288330638
 
+https://chat.openai.com/share/f4bbdde0-36cc-4687-964d-4c860025ae53
 
-{
-  "name": "04_p5js-electron",
-  "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@electron-forge/cli": "^7.4.0",
-    "@electron-forge/maker-deb": "^7.4.0",
-    "@electron-forge/maker-rpm": "^7.4.0",
-    "@electron-forge/maker-squirrel": "^7.4.0",
-    "@electron-forge/maker-zip": "^7.4.0",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.4.0",
-    "@electron-forge/plugin-fuses": "^7.4.0",
-    "@electron/fuses": "^1.8.0",
-    "electron": "^30.0.2"
-  },
-  "dependencies": {
-    "electron-squirrel-startup": "^1.0.0",
-    "osc-js": "^2.4.1"
-  }
-}
+Allow incoming connections in Settings->Firewall
