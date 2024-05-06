@@ -2,9 +2,9 @@ import oscP5.*;
 import netP5.*;
 OscP5 oscP5;
 
-float rcvX; 
-float rcvY; 
 int nFaces; 
+int oscVideoWidth;
+int oscVideoHeight;
 int nFaceLandmarks; 
 PVector faceData[]; 
 
@@ -16,21 +16,21 @@ void setup() {
   // size(800, 600);
   
   OscProperties oscProps = new OscProperties();
-  oscProps.setListeningPort(3334);
   oscProps.setDatagramSize(8192);
+  oscProps.setListeningPort(3334);
+  oscProps.setRemoteAddress("127.0.0.1",12000);
   
   oscP5 = new OscP5(this, oscProps);
   oscP5.plug(this, "receiveOscFaceData", "/faceData");
   
-  rcvX = 0; 
-  rcvY = 0; 
   nFaces = 0; 
+  oscVideoWidth = 640; 
+  oscVideoHeight = 480; 
   nFaceLandmarks = 478; 
   faceData = new PVector[nFaceLandmarks];
   for (int i=0; i<nFaceLandmarks; i++){
     faceData[i] = new PVector(0,0); 
   }
-  
   
   
   String[] cameras = Capture.list();
@@ -77,37 +77,31 @@ void oscEvent(OscMessage theOscMessage) {
     println(" typetag: "+theOscMessage.typetag());
   }
   
-  /*
   if(theOscMessage.checkAddrPattern("/nFaces")==true) {
     if(theOscMessage.checkTypetag("i")) {
-      int nF = theOscMessage.get(0).intValue(); 
-      if ((nF >= 0) && (nF <= 4)){
-        nFaces = nF;
-      }
+      int val = theOscMessage.get(0).intValue(); 
+      nFaces = val;
     }
   }
-  */
-  
-  /*
-  // check if theOscMessage has the address pattern we are looking for. 
-  if(theOscMessage.checkAddrPattern("/mouseFromP5")==true) {
-    // check if the typetag is the right one. 
-    if(true){ ///theOscMessage.checkTypetag("ff")) {
-      // parse theOscMessage and extract the values from the osc message arguments.
-      rcvX = theOscMessage.get(0).floatValue(); 
-      rcvY = theOscMessage.get(1).floatValue();
-      
-      if (bVerbose){
-        println(" values: "+rcvX+", "+rcvY);
-      }
-      return;
-    }  
+  if(theOscMessage.checkAddrPattern("/videoWidth")==true) {
+    if(theOscMessage.checkTypetag("i")) {
+      int val = theOscMessage.get(0).intValue(); 
+      if (val > 0){ oscVideoWidth = val; }
+    }
   }
-  */
-  
+  if(theOscMessage.checkAddrPattern("/videoHeight")==true) {
+    if(theOscMessage.checkTypetag("i")) {
+      int val = theOscMessage.get(0).intValue(); 
+      if (val > 0){ oscVideoHeight = val; }
+    }
+  }
 }
 
-
+void hideOscSource(){
+  OscMessage myMessage = new OscMessage("/hide");
+  myMessage.add(123); /* add an int to the osc message */
+  oscP5.send(myMessage);  
+}
 
 // receiveOSCFaceData is called by oscP5 when receiving
 // an OSC message with address pattern /faceData (see plug above)
@@ -125,15 +119,17 @@ void receiveOscFaceData (float[] theValues) {
 void drawFaceData(){
   noStroke(); 
   fill(255); 
-  for (int i=0; i<nFaceLandmarks; i++){
-    float px = faceData[i].x * width; 
-    float py = faceData[i].y * height;
-    circle(px,py,5); 
+  if (nFaces > 0){
+    for (int i=0; i<nFaceLandmarks; i++){
+      float px = faceData[i].x * width; 
+      float py = faceData[i].y * height;
+      circle(px,py,5); 
+    }
   }
 }
 
 void keyPressed(){
-  if (key == 'f'){
-    fullScreen(); 
+  if (key == 'X'){
+    hideOscSource(); 
   }
 }

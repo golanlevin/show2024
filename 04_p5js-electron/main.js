@@ -40,8 +40,9 @@ function createWindow() {
   mainWindow.setContentSize(640,480); //640,480); //1,1); 
   let bShowConsole = !true;
   if (bShowConsole){
-    // Note: showing the console also triggers a harmless error: 
+    // Note: showing the console also produces a harmless error: 
     // "Request Autofill.enable failed, source: devtools://devtools/" etc.
+    mainWindow.setContentSize(1280,480);
     mainWindow.webContents.openDevTools();
   }
 

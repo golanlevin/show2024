@@ -1,6 +1,8 @@
 const { ipcRenderer } = require('electron');
 const OSC = require('osc-js');
 let osc;
+let lastSendOscTime = 0; 
+let oscThrottlePeriod = 30; 
 
 // Global variables.
 let myFaceLandmarker;
@@ -8,7 +10,7 @@ let faceLandmarks;
 let myCapture;
 let lastVideoTime = -1;
 let bShowVideo = false;
-const myEps = 0.0000001;
+
 
 const trackingConfig = {
 	cpuOrGpuString: "GPU" /* "GPU" or "CPU" */,
@@ -52,9 +54,10 @@ async function predictWebcam() {
 		);
 	  }
 	  lastVideoTime = myCapture.elt.currentTime;
-	  sendFaceDataARR(); 
+	  sendOscData(); 
 	}
-	window.requestAnimationFrame(predictWebcam);
+	// window.requestAnimationFrame(predictWebcam);
+	setTimeout(predictWebcam, 1000);
 }
 
 //------------------------------------------
@@ -63,15 +66,25 @@ function openOSC(){
 	  send:{
 		host: '127.0.0.1',
 		port: 3334,
+	  },
+	  open: {
+		host: '127.0.0.1',
+		port: 12000 // Port to receive messages
 	  }
 	}) });
+
+	osc.on('/hide', (message) => {
+		ipcRenderer.send('toggle-window');
+		console.log('Received /hide message:', message);
+	});
+
 	osc.open();
+
 }
 
 //------------------------------------------
 function setup() {
 	createCanvas(640, 480);
-	frameRate(30); 
 	openOSC(); 
 
 	myCapture = createCapture(VIDEO);
@@ -82,6 +95,8 @@ function setup() {
 function keyPressed(){
 	if (key == 'X'){
 		ipcRenderer.send('toggle-window');
+	} else if (key == 'V'){
+		bShowVideo = !bShowVideo;
 	}
 }
 
@@ -117,7 +132,7 @@ function drawFacePoints() {
 	if (faceLandmarks && faceLandmarks.faceLandmarks) {
 		const nFaces = faceLandmarks.faceLandmarks.length;
 		if (nFaces > 0) {
-			fill("white");
+			fill(255);
 			noStroke();
 			for (let f = 0; f < nFaces; f++) {
 				let aFace = faceLandmarks.faceLandmarks[f];
@@ -135,18 +150,8 @@ function drawFacePoints() {
 }
 
 //------------------------------------------
-function drawDiagnosticInfo() {
-	noStroke();
-	fill("white");
-	text("FPS: " + int(frameRate()), 30, 40);
-}
-
-//------------------------------------------
 function sendFaceDataARR(){
 	var arr = ["/faceData"];
-	// arr.push(camera.videoWidth);
-	// arr.push(camera.videoHeight);
-	// arr.push(poses.length);
 	if (faceLandmarks && faceLandmarks.faceLandmarks) {
 		const nFaces = faceLandmarks.faceLandmarks.length;
 
@@ -166,4 +171,31 @@ function sendFaceDataARR(){
 	osc.send(new OSC.Message(...arr));
 }
 
+//------------------------------------------
+function sendOtherData(){
+	let nFaces = 0; 
+	if (faceLandmarks && faceLandmarks.faceLandmarks) {
+		nFaces = faceLandmarks.faceLandmarks.length;
+	}
+	osc.send(new OSC.Message('/videoWidth',myCapture.width));
+	osc.send(new OSC.Message('/videoHeight',myCapture.height));
+	osc.send(new OSC.Message('/nFaces',nFaces));
+}
+
+//------------------------------------------
+function sendOscData(){
+	let now = performance.now();
+	if (now - lastSendOscTime > oscThrottlePeriod) {
+		sendOtherData(); 
+		sendFaceDataARR();
+		lastSendOscTime = now;
+	}
+}
+
+//------------------------------------------
+function drawDiagnosticInfo() {
+	noStroke();
+	fill(255);
+	text("FPS: " + int(frameRate()), 30, 40);
+}
 

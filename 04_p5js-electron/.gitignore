@@ -25,3 +25,5 @@ pids
 *.pid
 *.seed
 *.pid.lock
+
+out/
