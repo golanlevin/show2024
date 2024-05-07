@@ -27,8 +27,12 @@ npm run make
 
 #### More information 
 
-https://chatgpt.com/c/1e6fbf6d-7c1d-4049-b4f9-7b7288330638
+* https://chatgpt.com/c/1e6fbf6d-7c1d-4049-b4f9-7b7288330638
+* https://chat.openai.com/share/f4bbdde0-36cc-4687-964d-4c860025ae53
+* Allow incoming connections in Settings->Firewall
 
-https://chat.openai.com/share/f4bbdde0-36cc-4687-964d-4c860025ae53
+#### Todo: 
 
-Allow incoming connections in Settings->Firewall
+* Choose camera in p5 & Processing
+* Art
+
