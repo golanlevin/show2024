@@ -2,8 +2,8 @@ const { app, BrowserWindow } = require('electron');
 const { powerSaveBlocker } = require('electron');
 const { ipcMain } = require('electron');
 
-let appBlockerId, displayBlockerId;
 let mainWindow;
+let appBlockerId, displayBlockerId;
 let bWindowVisibility;
 
 // Append switches to command line before the app is ready.
@@ -22,10 +22,12 @@ function createWindow() {
     height: 480,
     titleBarStyle: 'hidden',
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: true, /* If you rely on Node.js modules in p5 */
+      contextIsolation: false, /* To allow more straightforward access between p5 and Node */
       backgroundThrottling: false,
-      pageVisibility: true
+      pageVisibility: true, 
+      enableRemoteModule: true, /* Enables the remote module if you need to use it */
+      sandbox: false /* Disables the Chrome sandbox for the renderer processes */
     }
   });
 
@@ -36,8 +38,8 @@ function createWindow() {
   mainWindow.setAlwaysOnTop(true);
   mainWindow.setVisibleOnAllWorkspaces(true);
   mainWindow.webContents.setBackgroundThrottling(false);
-  mainWindow.setPosition(0, 0);
-  mainWindow.setContentSize(640,480); //640,480); //1,1); 
+  mainWindow.setPosition(0,0);
+  mainWindow.setContentSize(640,480);
   let bShowConsole = !true;
   if (bShowConsole){
     // Note: showing the console also produces a harmless error: 
@@ -61,7 +63,6 @@ function createWindow() {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   createWindow();
-
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.

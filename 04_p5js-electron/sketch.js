@@ -2,16 +2,21 @@ const { ipcRenderer } = require('electron');
 const OSC = require('osc-js');
 let osc;
 let lastSendOscTime = 0; 
-let oscThrottlePeriod = 30; 
+let oscThrottlePeriod = 30; //ms
+let portForSendingFaceData;
+let portForReceivingSignals;
 
-// Global variables.
+let settingsJson;
+let myCapture;
+let videoInputDevices = [];
+let preferredCameraName;
+let bShowVideo = false;
+let bCalculateFaceMetrics = true;
+let bWindowVisibility = true;
+
 let myFaceLandmarker;
 let faceLandmarks;
-let myCapture;
 let lastVideoTime = -1;
-let bShowVideo = false;
-
-
 const trackingConfig = {
 	cpuOrGpuString: "GPU" /* "GPU" or "CPU" */,
 	maxNumFaces: 1,
@@ -20,48 +25,64 @@ const trackingConfig = {
 //------------------------------------------
 async function preload() {
 
+	// Assign the camera choice to a global variable
+	preferredCameraName = "";
+	settingsJson = loadJSON('settings.json');
+
+	//--------------
 	const mediapipe_module = await import(
-		/* "/mediapipe/tasks-vision/vision_bundle.js" */
-		"https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js"
+		"./mediapipe-0.10.12/tasks-vision/vision_bundle.js"
+		/* "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" */
 	);
 	let FaceLandmarker = mediapipe_module.FaceLandmarker;
 	let FilesetResolver = mediapipe_module.FilesetResolver;
 	const vision = await FilesetResolver.forVisionTasks(
-		/* "/mediapipe/tasks-vision@0.10.12/wasm" */
-		"https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.13/wasm"
+		"./mediapipe-0.10.12/tasks-vision@0.10.12/wasm"
+		/* "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.13/wasm" */
 	);
 	myFaceLandmarker = await FaceLandmarker.createFromOptions(vision, {
 		numFaces: trackingConfig.maxNumFaces,
 		runningMode: "VIDEO",
-		outputFaceBlendshapes: false,
+		outputFaceBlendshapes: bCalculateFaceMetrics,
 		baseOptions: {
 			delegate: trackingConfig.cpuOrGpuString,
 			modelAssetPath:
-			/* "/mediapipe/face_landmarker.task", */
-			"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+			"./mediapipe-0.10.12/face_landmarker.task"
+			/* "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",*/
 		},
 	});
 }
 
 //------------------------------------------
 async function predictWebcam() {
-	let startTimeMs = performance.now();
-	if (lastVideoTime !== myCapture.elt.currentTime) {
-	  if (myFaceLandmarker) {
-		faceLandmarks = myFaceLandmarker.detectForVideo(
-		  myCapture.elt,
-		  startTimeMs
-		);
-	  }
-	  lastVideoTime = myCapture.elt.currentTime;
-	  sendOscData(); 
+	if (myCapture){
+		if ((myCapture.elt) && (myCapture.elt.width > 0) && (myCapture.elt.height > 0)){
+			let startTimeMs = performance.now();
+			if (lastVideoTime !== myCapture.elt.currentTime) {
+				if (myFaceLandmarker) {
+					faceLandmarks = myFaceLandmarker.detectForVideo(
+						myCapture.elt,
+						startTimeMs
+					);
+				}
+				lastVideoTime = myCapture.elt.currentTime;
+				sendOscData(); 
+			}
+		}
 	}
-	// window.requestAnimationFrame(predictWebcam);
-	setTimeout(predictWebcam, 1000);
 }
 
 //------------------------------------------
 function openOSC(){
+
+	portForSendingFaceData = 3334;
+    portForReceivingSignals = 12000;
+	if (settingsJson){
+		portForSendingFaceData = settingsJson.portForSendingFaceData;
+    	portForReceivingSignals = settingsJson.portForReceivingSignals;
+	}
+
+	//------------
 	osc = new OSC({ plugin: new OSC.DatagramPlugin({
 	  send:{
 		host: '127.0.0.1',
@@ -79,7 +100,6 @@ function openOSC(){
 	});
 
 	osc.open();
-
 }
 
 //------------------------------------------
@@ -87,14 +107,54 @@ function setup() {
 	createCanvas(640, 480);
 	openOSC(); 
 
-	myCapture = createCapture(VIDEO);
-	myCapture.size(640, 480);
-	myCapture.hide();
+	// List cameras and start video capture once devices are listed
+	listCameras().then(() => {startVideoCapture();});
+
+	// myCapture = createCapture(VIDEO);
+	// myCapture.size(640, 480);
+	// myCapture.hide()
 }
 
+//------------------------------------------
+async function listCameras() {
+	let devices = await navigator.mediaDevices.enumerateDevices();
+	videoInputDevices = devices.filter(device => device.kind === 'videoinput');
+	// console.log(videoInputDevices);  // Log out devices to see what's available
+}
+
+function startVideoCapture() {
+
+	if (settingsJson){
+		preferredCameraName = settingsJson.cameraChoice;
+	}
+
+	// Check if a specific camera is available, e.g., 'Logitech c920'
+	let selectedCamera = videoInputDevices.find(device => device.label.includes(preferredCameraName));
+	if (selectedCamera) {
+	 	// console.log("Using selectedCamera: " + selectedCamera.label);
+		myCapture = createCapture({
+			video: {
+				deviceId: selectedCamera.deviceId
+			},
+			audio: false /* disable audio capture */
+		});
+	} else if (videoInputDevices.length > 0) {
+		// console.log("Using default camera: " + videoInputDevices[0].label);
+		myCapture = createCapture(VIDEO);
+		myCapture.size(640, 480);
+
+	} else {
+	  	console.log("No camera available");
+	}
+	myCapture.hide(); // Hide the HTML video element; use p5 canvas for rendering
+}
+
+//------------------------------------------
 function keyPressed(){
 	if (key == 'X'){
 		ipcRenderer.send('toggle-window');
+		bWindowVisibility = !bWindowVisibility;
+
 	} else if (key == 'V'){
 		bShowVideo = !bShowVideo;
 	}
@@ -102,14 +162,16 @@ function keyPressed(){
 
 //------------------------------------------
 function draw() {
-	background(0,0,30);
-
-	push();
+	background(0,0,0);
 	predictWebcam();
-	drawVideoBackground();
-	drawFacePoints();
-	drawDiagnosticInfo(); 
-	pop();
+	if (bWindowVisibility){
+		push();
+		drawVideoBackground();
+		drawFaceLandmarks();
+		drawFaceMetrics(); 
+		drawDiagnosticInfo(); 
+		pop();
+	}
 }
 
 
@@ -128,7 +190,7 @@ function drawVideoBackground() {
   
 //------------------------------------------
 // Tracks 478 points on the face.
-function drawFacePoints() {
+function drawFaceLandmarks() {
 	if (faceLandmarks && faceLandmarks.faceLandmarks) {
 		const nFaces = faceLandmarks.faceLandmarks.length;
 		if (nFaces > 0) {
@@ -150,12 +212,51 @@ function drawFacePoints() {
 }
 
 //------------------------------------------
-function sendFaceDataARR(){
-	var arr = ["/faceData"];
+function drawFaceMetrics(){
+	if (bCalculateFaceMetrics){
+		if (faceLandmarks && faceLandmarks.faceBlendshapes) {
+			const nFaces = faceLandmarks.faceLandmarks.length;
+			for (let f = 0; f < nFaces; f++) {
+				let aFaceMetrics = faceLandmarks.faceBlendshapes[f];
+				if (aFaceMetrics){
+				
+					textSize(7); 
+					let tx = 50 + f*100; 
+					let ty = 50; 
+					let dy = 8;
+					let vx0 = tx-5; 
+					let vx1 = vx0-40;
+					
+					let nMetrics = aFaceMetrics.categories.length; 
+					for (let i=1; i<nMetrics; i++){
+						let metricName = aFaceMetrics.categories[i].categoryName;
+						noStroke();
+						fill(255);
+						// text(metricName, tx,ty); 
+						text(nf(i,2) + " " + metricName, tx,ty); 
+						
+						let metricValue = aFaceMetrics.categories[i].score;
+						let vx = map(metricValue,0,1,vx0,vx1);
+						stroke(255); 
+						strokeWeight(2.0); 
+						line(vx0,ty-2, vx,ty-2); 
+						stroke(0,0,0,20);
+						line(vx0,ty-2, vx1,ty-2); 
+						ty+=dy;
+					}
+				}
+			}
+		}
+	}
+}
+
+//------------------------------------------
+function sendFaceLandmarksARR(){
+	let arr = ["/faceLandmarks"];
 	if (faceLandmarks && faceLandmarks.faceLandmarks) {
 		const nFaces = faceLandmarks.faceLandmarks.length;
 
-		for (var f = 0; f < nFaces; f++){
+		for (let f = 0; f < nFaces; f++){
 			let aFace = faceLandmarks.faceLandmarks[f];
 			if (aFace) {
 				let nFaceLandmarks = aFace.length;
@@ -170,6 +271,28 @@ function sendFaceDataARR(){
 	}
 	osc.send(new OSC.Message(...arr));
 }
+
+//------------------------------------------
+function sendFaceMetricsARR(){
+	let arr = ["/faceMetrics"];
+	if (bCalculateFaceMetrics){
+		if (faceLandmarks && faceLandmarks.faceBlendshapes) {
+			const nFaces = faceLandmarks.faceLandmarks.length;
+			for (let f = 0; f < nFaces; f++) {
+				let aFaceMetrics = faceLandmarks.faceBlendshapes[f];
+				if (aFaceMetrics){
+					let nMetrics = aFaceMetrics.categories.length; 
+					for (let i=0; i<nMetrics; i++){
+						let metricValue = aFaceMetrics.categories[i].score;
+						arr.push(metricValue);
+					}
+				}
+			}
+		}
+	}
+	osc.send(new OSC.Message(...arr));
+}
+
 
 //------------------------------------------
 function sendOtherData(){
@@ -187,7 +310,8 @@ function sendOscData(){
 	let now = performance.now();
 	if (now - lastSendOscTime > oscThrottlePeriod) {
 		sendOtherData(); 
-		sendFaceDataARR();
+		sendFaceLandmarksARR();
+		sendFaceMetricsARR(); 
 		lastSendOscTime = now;
 	}
 }
@@ -196,6 +320,6 @@ function sendOscData(){
 function drawDiagnosticInfo() {
 	noStroke();
 	fill(255);
+	textSize(10); 
 	text("FPS: " + int(frameRate()), 30, 40);
 }
-

@@ -30,9 +30,13 @@ npm run make
 * https://chatgpt.com/c/1e6fbf6d-7c1d-4049-b4f9-7b7288330638
 * https://chat.openai.com/share/f4bbdde0-36cc-4687-964d-4c860025ae53
 * Allow incoming connections in Settings->Firewall
+* Included files appear to be located in `04_p5js-electron-darwin-arm64/04_p5js-electron.app/Contents/Resources/app/settings.json`
+
 
 #### Todo: 
 
-* Choose camera in p5 & Processing
+* Choose camera in Processing
+* Make sure settings and mediapipe files are included in build
+* Dealing with multiple monitors
 * Art
 
