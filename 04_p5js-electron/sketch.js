@@ -179,8 +179,8 @@ function draw() {
 function drawVideoBackground() {
 	if (bShowVideo){
 		push();
-		translate(width, 0);
-		scale(-1, 1);
+		// translate(width, 0);
+		// scale(-1, 1);
 		tint(127);
 		image(myCapture, 0, 0, width, height);
 		tint(255);
@@ -201,7 +201,7 @@ function drawFaceLandmarks() {
 				if (aFace) {
 					let nFaceLandmarks = aFace.length;
 					for (let i = 0; i < nFaceLandmarks; i++) {
-						let px = map(aFace[i].x, 0, 1, width, 0);
+						let px = map(aFace[i].x, 0, 1, 0, width); //, 0);
 						let py = map(aFace[i].y, 0, 1, 0, height);
 						square(px, py, 2);
 					}
@@ -261,8 +261,8 @@ function sendFaceLandmarksARR(){
 			if (aFace) {
 				let nFaceLandmarks = aFace.length;
 				for (let i = 0; i < nFaceLandmarks; i++) {
-					let px = map(aFace[i].x, 0, 1, 1, 0);
-					let py = map(aFace[i].y, 0, 1, 0, 1);
+					let px = aFace[i].x; //map(aFace[i].x, 0, 1, 1, 0);
+					let py = aFace[i].y; //map(aFace[i].y, 0, 1, 0, 1);
 					arr.push(px);
 					arr.push(py);
 				}
