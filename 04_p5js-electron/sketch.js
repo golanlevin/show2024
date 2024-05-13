@@ -3,8 +3,8 @@ const OSC = require('osc-js');
 let osc;
 let lastSendOscTime = 0; 
 let oscThrottlePeriod = 30; //ms
-let portForSendingFaceData;
-let portForReceivingSignals;
+let portForSendingFaceData = 3334; // may be overwritten by settings
+let portForReceivingSignals = 12000;
 
 let settingsJson;
 let myCapture;
@@ -74,9 +74,6 @@ async function predictWebcam() {
 
 //------------------------------------------
 function openOSC(){
-
-	portForSendingFaceData = 3334;
-    portForReceivingSignals = 12000;
 	if (settingsJson){
 		portForSendingFaceData = settingsJson.portForSendingFaceData;
     	portForReceivingSignals = settingsJson.portForReceivingSignals;
@@ -124,6 +121,8 @@ async function listCameras() {
 
 function startVideoCapture() {
 
+	let capW = 640; 
+	let capH = 480; 
 	if (settingsJson){
 		preferredCameraName = settingsJson.cameraChoice;
 	}
@@ -131,17 +130,24 @@ function startVideoCapture() {
 	// Check if a specific camera is available, e.g., 'Logitech c920'
 	let selectedCamera = videoInputDevices.find(device => device.label.includes(preferredCameraName));
 	if (selectedCamera) {
+		if (settingsJson.cameraWidth){
+			capW = settingsJson.cameraWidth;
+			capH = settingsJson.cameraHeight;
+		}
+		
 	 	// console.log("Using selectedCamera: " + selectedCamera.label);
 		myCapture = createCapture({
 			video: {
-				deviceId: selectedCamera.deviceId
+				deviceId: selectedCamera.deviceId,
+				width: capW,
+				height: capH
 			},
 			audio: false /* disable audio capture */
 		});
 	} else if (videoInputDevices.length > 0) {
 		// console.log("Using default camera: " + videoInputDevices[0].label);
 		myCapture = createCapture(VIDEO);
-		myCapture.size(640, 480);
+		myCapture.size(capW, capH);
 
 	} else {
 	  	console.log("No camera available");
@@ -179,10 +185,10 @@ function draw() {
 function drawVideoBackground() {
 	if (bShowVideo){
 		push();
-		// translate(width, 0);
-		// scale(-1, 1);
 		tint(127);
-		image(myCapture, 0, 0, width, height);
+		let vw = width; 
+		let vh = (myCapture.elt.height / myCapture.elt.width) * vw;
+		image(myCapture, 0, 0, vw,vh);
 		tint(255);
 		pop();
 	}
@@ -196,13 +202,16 @@ function drawFaceLandmarks() {
 		if (nFaces > 0) {
 			fill(255);
 			noStroke();
+			let vw = width; 
+			let vh = (myCapture.elt.height / myCapture.elt.width) * vw;
+
 			for (let f = 0; f < nFaces; f++) {
 				let aFace = faceLandmarks.faceLandmarks[f];
 				if (aFace) {
 					let nFaceLandmarks = aFace.length;
 					for (let i = 0; i < nFaceLandmarks; i++) {
-						let px = map(aFace[i].x, 0, 1, 0, width); //, 0);
-						let py = map(aFace[i].y, 0, 1, 0, height);
+						let px = map(aFace[i].x, 0, 1, 0, vw);
+						let py = map(aFace[i].y, 0, 1, 0, vh);
 						square(px, py, 2);
 					}
 				}

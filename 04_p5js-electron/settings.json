@@ -1,6 +1,8 @@
 {
-    "cameraChoice": "FaceTime",
+    "cameraChoice": "C920",
     "cameraChoiceOptions": "Logitech | FaceTime | USB | C920", 
+    "cameraWidth": 1280, 
+    "cameraHeight": 720,
 
     "portForSendingFaceData": 3334,
     "portForReceivingSignals": 12000

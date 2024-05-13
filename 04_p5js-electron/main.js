@@ -5,6 +5,7 @@ const { ipcMain } = require('electron');
 let mainWindow;
 let appBlockerId, displayBlockerId;
 let bWindowVisibility;
+let bShowConsole = !true;
 
 // Append switches to command line before the app is ready.
 // Change the autoplay policy in Chromium, removing restrictions on autoplaying audio.
@@ -40,7 +41,6 @@ function createWindow() {
   mainWindow.webContents.setBackgroundThrottling(false);
   mainWindow.setPosition(0,0);
   mainWindow.setContentSize(640,480);
-  let bShowConsole = !true;
   if (bShowConsole){
     // Note: showing the console also produces a harmless error: 
     // "Request Autofill.enable failed, source: devtools://devtools/" etc.
