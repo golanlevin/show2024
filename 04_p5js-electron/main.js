@@ -1,6 +1,6 @@
 const { app, BrowserWindow } = require('electron');
-const { powerSaveBlocker } = require('electron');
-const { ipcMain } = require('electron');
+const { powerSaveBlocker } = require('electron'); // To keep things on
+const { ipcMain } = require('electron'); // To bridge data with p5js
 
 let mainWindow;
 let appBlockerId, displayBlockerId;
@@ -56,6 +56,9 @@ function createWindow() {
     powerSaveBlocker.stop(appBlockerId);
     powerSaveBlocker.stop(displayBlockerId);
   });
+
+  // Remember to disable "Reactions" in OSX Sonoma
+  // defaults write com.apple.VideoEffectCamera ReactionsEnabled -bool false
 }
 
 // This method will be called when Electron has finished

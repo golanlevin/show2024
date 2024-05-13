@@ -5,6 +5,7 @@ let lastSendOscTime = 0;
 let oscThrottlePeriod = 30; //ms
 let portForSendingFaceData = 3334; // may be overwritten by settings
 let portForReceivingSignals = 12000;
+let oscUpdateCount = 0; 
 
 let settingsJson;
 let myCapture;
@@ -75,19 +76,21 @@ async function predictWebcam() {
 //------------------------------------------
 function openOSC(){
 	if (settingsJson){
-		portForSendingFaceData = settingsJson.portForSendingFaceData;
-    	portForReceivingSignals = settingsJson.portForReceivingSignals;
+		let ptx = settingsJson.portForSendingFaceData;
+    	let prx = settingsJson.portForReceivingSignals;
+		if (ptx){portForSendingFaceData = ptx;}
+		if (prx){portForReceivingSignals = prx;}
 	}
 
 	//------------
 	osc = new OSC({ plugin: new OSC.DatagramPlugin({
 	  send:{
 		host: '127.0.0.1',
-		port: 3334,
+		port: portForSendingFaceData,
 	  },
 	  open: {
 		host: '127.0.0.1',
-		port: 12000 // Port to receive messages
+		port: portForReceivingSignals // Port to receive messages
 	  }
 	}) });
 
@@ -270,8 +273,8 @@ function sendFaceLandmarksARR(){
 			if (aFace) {
 				let nFaceLandmarks = aFace.length;
 				for (let i = 0; i < nFaceLandmarks; i++) {
-					let px = aFace[i].x; //map(aFace[i].x, 0, 1, 1, 0);
-					let py = aFace[i].y; //map(aFace[i].y, 0, 1, 0, 1);
+					let px = aFace[i].x;
+					let py = aFace[i].y;
 					arr.push(px);
 					arr.push(py);
 				}
@@ -311,7 +314,8 @@ function sendOtherData(){
 	}
 	osc.send(new OSC.Message('/videoWidth',myCapture.width));
 	osc.send(new OSC.Message('/videoHeight',myCapture.height));
-	osc.send(new OSC.Message('/nFaces',nFaces));
+	osc.send(new OSC.Message('/oscUpdateCount',oscUpdateCount));
+	osc.send(new OSC.Message('/nOscFaces',nFaces));
 }
 
 //------------------------------------------
@@ -322,6 +326,7 @@ function sendOscData(){
 		sendFaceLandmarksARR();
 		sendFaceMetricsARR(); 
 		lastSendOscTime = now;
+		oscUpdateCount++;
 	}
 }
 
