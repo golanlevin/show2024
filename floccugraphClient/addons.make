@@ -1,0 +1,4 @@
+ofxConvexHull
+ofxOpenCv
+ofxCv
+ofxOsc

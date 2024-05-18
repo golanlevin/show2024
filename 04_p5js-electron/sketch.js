@@ -109,10 +109,6 @@ function setup() {
 
 	// List cameras and start video capture once devices are listed
 	listCameras().then(() => {startVideoCapture();});
-
-	// myCapture = createCapture(VIDEO);
-	// myCapture.size(640, 480);
-	// myCapture.hide()
 }
 
 //------------------------------------------
@@ -127,16 +123,21 @@ function startVideoCapture() {
 	let capW = 640; 
 	let capH = 480; 
 	if (settingsJson){
-		preferredCameraName = settingsJson.cameraChoice;
-	}
+		if (settingsJson.cameraChoice){
+			preferredCameraName = settingsJson.cameraChoice;
+		}
 
-	// Check if a specific camera is available, e.g., 'Logitech c920'
-	let selectedCamera = videoInputDevices.find(device => device.label.includes(preferredCameraName));
-	if (selectedCamera) {
 		if (settingsJson.cameraWidth){
 			capW = settingsJson.cameraWidth;
 			capH = settingsJson.cameraHeight;
 		}
+	}
+
+	print("video dims: " + capW + " " + capH);
+
+	// Check if a specific camera is available, e.g., 'Logitech c920'
+	let selectedCamera = videoInputDevices.find(device => device.label.includes(preferredCameraName));
+	if (selectedCamera) {
 		
 	 	// console.log("Using selectedCamera: " + selectedCamera.label);
 		myCapture = createCapture({
@@ -149,8 +150,15 @@ function startVideoCapture() {
 		});
 	} else if (videoInputDevices.length > 0) {
 		// console.log("Using default camera: " + videoInputDevices[0].label);
-		myCapture = createCapture(VIDEO);
-		myCapture.size(capW, capH);
+		// myCapture = createCapture(VIDEO);
+		// myCapture.size(capW, capH);
+		myCapture = createCapture({
+			video: {
+				width: capW,
+				height: capH
+			},
+			audio: false /* disable audio capture */
+		});
 
 	} else {
 	  	console.log("No camera available");
