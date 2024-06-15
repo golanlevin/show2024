@@ -217,7 +217,7 @@ void ofApp::setupSimulation(){
     UM.clear();
     OM.clear();
     
-    float baseOrientation = ofDegToRad(40); //ofRandom(TWO_PI);
+    float baseOrientation = ofDegToRad(-40); //ofRandom(TWO_PI);
     for (int i=0; i<20000; i++){
         float px = ofRandom(0, fboW);
         float py = ofRandom(0, fboH);
