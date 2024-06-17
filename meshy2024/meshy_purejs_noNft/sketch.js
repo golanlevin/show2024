@@ -68,6 +68,7 @@ let bEnableAuto=true;
 let bMPressed=false;
 let begunT,appStartT;
 let lastPokeT,helpStartT,startDebugT;
+let tapCount=0;
 
 const MWHALE=0;
 const MSCRIB=1;
@@ -81,6 +82,7 @@ let gestA=[];
 let gestB=[];
 let THE_PRIMARY_HASH;
 let THE_CURRENT_HASH;
+let clix=[];
 
 function setup(){
 THE_CURRENT_HASH=THE_PRIMARY_HASH=fxhash;
@@ -254,7 +256,7 @@ function render(){
 		let fromI=(currPathI-1+offset+nPaths)%nPaths;
 		let toI=(currPathI+offset+nPaths)%nPaths;
 		drawStem(pathBezArr[toI]);
-		if((toI%2==1)||bAuto){drawStem(pathBezArr[fromI]);}
+		if((toI%2==1)||bAuto||(myTch.length>1)){drawStem(pathBezArr[fromI]);}
 		if(nClicks!=1||currPathI!=1||bSpecialCase){
 			let num=nPaths-1;
 			if(nClicks<nPaths){num=currPathI;}
@@ -348,29 +350,57 @@ function onKeyPress(ev){
 lastPokeT=myMils();
 let k=ev.key.toLowerCase();
 if(k=='d'){
-    bDrawDebug=!bDrawDebug;
-    if(bDrawDebug)startDebugT=myMils();
-}else if(k=='f'){ 
-    if(!document.fullscreenElement){
-     canvas.requestFullscreen();
-    }else{
-     document.exitFullscreen();
-    }
+	bDrawDebug=!bDrawDebug;
+	if(bDrawDebug)startDebugT=myMils();
+}else if(k=='f'){
+  toggleFullScreen();
+
 }else if(k=='r'){
-    THE_CURRENT_HASH=THE_PRIMARY_HASH;
-    createStarter();
-    bShowInfo=true;
-    helpStartT=myMils();
+THE_CURRENT_HASH=THE_PRIMARY_HASH;
+createStarter();
+bShowInfo=true;
+helpStartT=myMils();
+
 }else if(k=='n'){
-    THE_CURRENT_HASH=getRandomFxhash();
-    createStarter();
+THE_CURRENT_HASH=getRandomFxhash();
+createStarter();
+
 }else if(k=='a'){
-  bEnableAuto=!bEnableAuto;
+bEnableAuto=!bEnableAuto;
+
 }else{
-  bShowInfo=!bShowInfo;
-  if(bShowInfo){helpStartT=myMils();}
+bShowInfo=!bShowInfo;
+if(bShowInfo){helpStartT=myMils();}
 }}
 
+function handleToggleClix(mx,my){
+clix.push(new Vec3f(mx,my,0));
+if(clix.length>10){
+clix.splice(0,1);
+let dh=0;
+for(let i=0;i<9;i++){
+let dx=clix[i+1].x-clix[i].x;
+let dy=clix[i+1].y-clix[i].y;
+dh=Math.max(dh,Math.sqrt(dx*dx+dy*dy));
+}
+if (dh<20){
+clix=[];
+toggleFullScreen();
+}}}
+
+function toggleFullScreen(){
+if(!document.fullscreenElement && !document.webkitFullscreenElement){
+if(canvas.requestFullscreen){
+canvas.requestFullscreen();
+}else if(canvas.webkitRequestFullscreen){
+canvas.webkitRequestFullscreen();
+}
+}else{
+if(document.exitFullscreen){
+document.exitFullscreen();
+}else if(document.webkitExitFullscreen){
+document.webkitExitFullscreen();
+}}}
 
 function onMouseMove(ev){
 lastPokeT=myMils();
@@ -395,6 +425,7 @@ const rect=canvas.getBoundingClientRect();
 myMX=ev.clientX-rect.left;
 myMY=ev.clientY-rect.top;
 myMousePressed(myMX,myMY);
+handleToggleClix(myMX,myMY); 
 }
 function myMousePressed(mx,my){
 if(!bBegun){
@@ -458,6 +489,7 @@ which=existI;
 myTch[existI].x=mx;
 myTch[existI].y=my;
 }else{
+handleToggleClix(mx,my);
 currPathI = (currPathI+1)%2;
 which=currPathI;
 myTch.push({
