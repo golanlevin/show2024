@@ -25,6 +25,11 @@ npx electron-forge import
 npm run make
 ```
 
+#### Key Commands
+
+* 'V' - toggle Video
+* 'X' - toggle app display
+
 #### More information 
 
 * https://chatgpt.com/c/1e6fbf6d-7c1d-4049-b4f9-7b7288330638
