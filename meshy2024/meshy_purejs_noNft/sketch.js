@@ -321,7 +321,6 @@ for(let i=0;i<str.length;i++){
 ctx.fillText(str[i],myW/2,myH/4+i*txSize*1.125);
 }}}}
 
-
 function createStarter(){	
 	nClicks=currPathI=0;
 	for(let p=0;p<pathBezArr.length;p++){
@@ -471,38 +470,39 @@ bSpecialCase=false;
 }
 
 function onTouchStart(ev){
+if(ev.touches.length>2){
+myTch=[];return;
+}
 ev.preventDefault();
-if (myTch.length<2){
-let which = -1;
+if(myTch.length<2){
+let which=-1;
 let mx=-1,my=-1;
-for (let tu of ev.touches){
-let existI=-1; 
+for(let tu of ev.touches){
+let existI=-1;
 for(let i=0;i<myTch.length;i++){
-if (myTch[i].id===tu.identifier){
-existI=i;break;
-}
-}
-mx=tu.clientX;
-my=tu.clientY;
+if(myTch[i].id===tu.identifier){
+existI=i;
+break;
+}}
+mx=tu.clientX;my=tu.clientY;
 if(existI>-1){
 which=existI;
-myTch[existI].x=mx;
-myTch[existI].y=my;
+myTch[existI].x=mx;myTch[existI].y=my;
 }else{
 handleToggleClix(mx,my);
-currPathI = (currPathI+1)%2;
+currPathI=(currPathI+1)%2;
 which=currPathI;
+if(myTch.length<2){
 myTch.push({
-id:tu.identifier,x:mx,y:my
+id:tu.identifier,x:mx,y:my,
 });
-}
-}
+}}}
 if(which!=-1){
 bBegun=true;
 fSinceMUp=0;
 bAuto=false;
 lastPokeT=myMils();
-bMPressed=(myTch.length==1);
+bMPressed=myTch.length==1;
 pathArr[which]=[];
 pathBezArr[which]=[];
 pathArr[which].push(new Vec3f(mx,my,0));
@@ -513,8 +513,11 @@ pathArr[(which+1)%2]=[];
 pathBezArr[(which+1)%2]=[];
 }}}}
 
-
 function onTouchMove(ev){
+if(ev.touches.length>2){
+myTch=[];
+return;
+}
 ev.preventDefault();
 for (let tu of ev.touches){
 for (let i=0;i<myTch.length;i++){
@@ -530,18 +533,15 @@ resampVec(which);
 break;
 }}}}
 
-function onTouchEnd(ev){
+function onTouchEnd(ev) {
 ev.preventDefault();
-for (let tu of ev.changedTouches){
-let index=myTch.findIndex(t => t.id===tu.identifier);
-if (index!==-1) {
 myTch=[];
 bAuto=false;
 bSpecialCase=false;
-bMPressed=false; 
+bMPressed=false;
 lastPokeT=myMils();
 fSinceMUp=0;
-}}}
+}
 
 function getPathLen(path){
 let len=0;
