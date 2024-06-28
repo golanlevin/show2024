@@ -13,7 +13,7 @@
 // f: toggle Fullscreen
 // a: toggle Autoplay
 // d: toggle Debug
-// n: gen New mesh
+// n: generate New mesh
 // r: Reset system
 // h: show Help
 
