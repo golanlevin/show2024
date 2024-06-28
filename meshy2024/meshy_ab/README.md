@@ -1,8 +1,15 @@
 # AB Setup 
 
-*Meshy* (1998, revised 2024) is an interactive drawing environment in which the user's strokes scaffold a gauzy mesh of animated elements. The mesh continually bridges the user's two most recent marks; by drawing, users can tease the mesh in real-time. In addition to its interactive mode, each token is initialized with a uniquely generated mesh composition. 
+#### Project Description
 
-*Meshy* was originally developed in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official release has been ported from C++ to pure JavaScript using the HTML5 Canvas API.
+*Meshy* (1998, revised 2024) is an interactive gestural abstraction in which a participant's strokes are used to scaffold a gauzy mesh of animated elements. The mesh continually bridges the user's two most recent marks; by drawing, users can tease the mesh in real-time. In addition to its interactive mode, each token is initialized with a uniquely generated mesh composition. 
+
+*Meshy* was originally developed in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official NFT release has been ported from C++ and Java (Processing) to pure JavaScript using the HTML5 Canvas API.
+
+#### Display Notes
+
+In its interactive mode, the Meshy drawing environment develops a responsive mesh using the participant's two most recent marks. To get started, draw two gestural strokes using your mouse, touchpad, or multitouch tablet surface. After thirty seconds without interaction, Meshy enters a self-playing generative mode. Each Meshy token is initialized with a uniquely generated composition that can be recalled using the "r" key, and whose space of possibilities can be explored using the "n" key.
+
 
 ---
 
