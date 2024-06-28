@@ -19,6 +19,10 @@ Meshy was originally developed by Golan Levin in C++ in 1998, while Levin was a 
 * CC BY-NC 4.0
 * https://creativecommons.org/licenses/by-nc/4.0/
 
+#### Base URI
+
+* https://api.artblocks.io/token/
+
 ---
 
 
