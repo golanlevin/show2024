@@ -18,6 +18,7 @@
 // h: show Help
 
 const canvas=document.getElementById('myCanvas');
+let myABRandom;let myABFeatures;
 let ctx;
 let nClicks;
 let currPathI=0;
@@ -81,13 +82,10 @@ let THE_CURRENT_HASH;
 let clix=[];
 
 function setup(){
-THE_CURRENT_HASH=THE_PRIMARY_HASH=fxhash;
-myRandomReset(THE_CURRENT_HASH);
 setInterval(myDraw,1000/60);
 appStartT=Date.now();
 lastPokeT=startDebugT=0;
 onResizeCanvas();
-
 window.addEventListener('mousedown',onMouseDown);
 window.addEventListener('mousemove',onMouseMove);
 window.addEventListener('mouseup',onMouseUp);
@@ -101,6 +99,10 @@ canvas.addEventListener('touchstart',onTouchStart);
 canvas.addEventListener('touchmove',onTouchMove);
 canvas.addEventListener('touchend',onTouchEnd);
 canvas.style.cursor='crosshair';
+
+THE_CURRENT_HASH=THE_PRIMARY_HASH=tokenData.hash;
+myABRandom=new Rnd();
+myRandomReset(THE_CURRENT_HASH);
 initMeshy();}
 
 function onResizeCanvas(){
@@ -288,7 +290,6 @@ function createStarter(){
 		pathArr[p]=[];
 		pathBezArr[p]=[];
 	}
-	myRandomReset(THE_CURRENT_HASH);
 	generateStarterGestures();
 	let srcGest=[gestA,gestB];
 	for(let g=0;g<2;g++){
@@ -305,237 +306,158 @@ function createStarter(){
 	fSinceMUp=nFadeFrames;
 }
 
-
 function onKeyPress(ev){
-lastPokeT=myMils();
-let k=ev.key.toLowerCase();
-if(k=='d'){
-	bDrawDebug=!bDrawDebug;
-	if(bDrawDebug)startDebugT=myMils();
-}else if(k=='f'){
-  toggleFullScreen();
-
-}else if(k=='r'){
-THE_CURRENT_HASH=THE_PRIMARY_HASH;
-createStarter();
-bShowInfo=true;
-helpStartT=myMils();
-
-}else if(k=='n'){
-THE_CURRENT_HASH=getRandomFxhash();
-createStarter();
-
-}else if(k=='a'){
-bEnableAuto=!bEnableAuto;
-
-}else{
-bShowInfo=!bShowInfo;
-if(bShowInfo){helpStartT=myMils();}
-}}
+lastPokeT=myMils();let k=ev.key.toLowerCase();
+if(k=='d'){bDrawDebug=!bDrawDebug;
+if(bDrawDebug)startDebugT=myMils();
+}else if(k=='f'){toggleFullScreen();
+}else if(k=='r'){THE_CURRENT_HASH=THE_PRIMARY_HASH;
+myRandomReset(THE_CURRENT_HASH);createStarter();
+bShowInfo=true;helpStartT=myMils();
+}else if(k=='n'){createStarter();
+}else if(k=='a'){bEnableAuto=!bEnableAuto;
+}else{bShowInfo=!bShowInfo;
+if(bShowInfo){helpStartT=myMils();}}}
 
 function handleToggleClix(mx,my){
 clix.push(new Vec3f(mx,my,0));
-if(clix.length>10){
-clix.splice(0,1);
-let dh=0;
+if(clix.length>10){clix.splice(0,1);let dh=0;
 for(let i=0;i<9;i++){
 let dx=clix[i+1].x-clix[i].x;
 let dy=clix[i+1].y-clix[i].y;
-dh=Math.max(dh,Math.sqrt(dx*dx+dy*dy));
-}
-if (dh<20){
-clix=[];
-toggleFullScreen();
-}}}
+dh=Math.max(dh,Math.sqrt(dx*dx+dy*dy));}
+if(dh<20){clix=[];toggleFullScreen();}}}
 
 function toggleFullScreen(){
-if(!document.fullscreenElement && !document.webkitFullscreenElement){
-if(canvas.requestFullscreen){
-canvas.requestFullscreen();
-}else if(canvas.webkitRequestFullscreen){
-canvas.webkitRequestFullscreen();
-}
-}else{
-if(document.exitFullscreen){
-document.exitFullscreen();
-}else if(document.webkitExitFullscreen){
-document.webkitExitFullscreen();
-}}}
+if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+if(canvas.requestFullscreen){canvas.requestFullscreen();
+}else if(canvas.webkitRequestFullscreen){canvas.webkitRequestFullscreen();}
+}else{if(document.exitFullscreen){document.exitFullscreen();
+}else if(document.webkitExitFullscreen){document.webkitExitFullscreen();}}}
 
 function onMouseMove(ev){
-lastPokeT=myMils();
-const rect=canvas.getBoundingClientRect();
-myMX=ev.clientX-rect.left;
-myMY=ev.clientY-rect.top;
-if(bMPressed){myMouseDragged(myMX,myMY);}
-}
+lastPokeT=myMils();const rect=canvas.getBoundingClientRect();
+myMX=ev.clientX-rect.left;myMY=ev.clientY-rect.top;
+if(bMPressed){myMouseDragged(myMX,myMY);}}
+
 function myMouseDragged(mx,my){
-bBegun=true;
-pathArr[currPathI].push(new Vec3f(mx,my,0));
-fSinceMUp=0;
-calcBezPath(currPathI);
-resampVec(currPathI);
-}
+bBegun=true;pathArr[currPathI].push(new Vec3f(mx,my,0));
+fSinceMUp=0;calcBezPath(currPathI);resampVec(currPathI);}
 
 function onMouseDown(ev){
-bAuto=false;
-bMPressed=true;
-lastPokeT=myMils();
+bAuto=false;bMPressed=true;lastPokeT=myMils();
 const rect=canvas.getBoundingClientRect();
-myMX=ev.clientX-rect.left;
-myMY=ev.clientY-rect.top;
-myMousePressed(myMX,myMY);
-handleToggleClix(myMX,myMY);}
+myMX=ev.clientX-rect.left;myMY=ev.clientY-rect.top;
+myMousePressed(myMX,myMY);handleToggleClix(myMX,myMY);}
+
 function myMousePressed(mx,my){
-if(!bBegun){
-begunT=myMils();
-pathArr[0]=[];
-pathArr[1]=[];
-pathBezArr[0]=[];
-pathBezArr[1]=[];
-currPathI=1;
-nClicks=0;
-bBegun=true;
-}
+if(!bBegun){begunT=myMils();
+pathArr[0]=[];pathArr[1]=[];
+pathBezArr[0]=[];pathBezArr[1]=[];
+currPathI=1;nClicks=0;bBegun=true;}
 bSpecialCase=false;
 if((nClicks==1)&&(currPathI==1)){
-bSpecialCase=true;
-}
+bSpecialCase=true;}
 currPathI=nClicks%nPaths;
-pathArr[currPathI]=[];
-pathBezArr[currPathI]=[];
+pathArr[currPathI]=[];pathBezArr[currPathI]=[];
 pathArr[currPathI].push(new Vec3f(mx,my,0));
 pathArr[currPathI].push(new Vec3f(mx+1,my+1,0));
 fSinceMUp=0;
 calcBezPath(currPathI);
-resampVec(currPathI);
-}
+resampVec(currPathI);}
 
 function onMouseUp(ev){
-bAuto=false;
-lastPokeT=myMils();
+bAuto=false;lastPokeT=myMils();
 const rect=canvas.getBoundingClientRect();
 myMX=ev.clientX-rect.left;
 myMY=ev.clientY-rect.top;
-myMouseReleased(myMX,myMY);
-}
+myMouseReleased(myMX,myMY);}
+
 function myMouseReleased(mx,my){
 bMPressed=false;
 calcBezPath(currPathI);
 resampVec(currPathI);
-nClicks++;
-currPathI=nClicks%nPaths;
-fSinceMUp=0;
-bSpecialCase=false;
-}
+nClicks++;currPathI=nClicks%nPaths;
+fSinceMUp=0;bSpecialCase=false;}
 
 function onTouchStart(ev){
 if(ev.touches.length>2){
-myTch=[];return;
-}
+myTch=[];return;}
 ev.preventDefault();
 if(myTch.length<2){
-let which=-1;
-let mx=-1,my=-1;
+let which=-1;let mx=-1,my=-1;
 for(let tu of ev.touches){
 let existI=-1;
 for(let i=0;i<myTch.length;i++){
 if(myTch[i].id===tu.identifier){
-existI=i;
-break;
-}}
+existI=i;break;}}
 mx=tu.clientX;my=tu.clientY;
-if(existI>-1){
-which=existI;
+if(existI>-1){which=existI;
 myTch[existI].x=mx;myTch[existI].y=my;
-}else{
-handleToggleClix(mx,my);
+}else{handleToggleClix(mx,my);
 currPathI=(currPathI+1)%2;
-which=currPathI;
-if(myTch.length<2){
-myTch.push({
-id:tu.identifier,x:mx,y:my,
-});
+which=currPathI;if(myTch.length<2){
+myTch.push({id:tu.identifier,x:mx,y:my});
 }}}
 if(which!=-1){
-bBegun=true;
-fSinceMUp=0;
-bAuto=false;
-lastPokeT=myMils();
-bMPressed=myTch.length==1;
-pathArr[which]=[];
-pathBezArr[which]=[];
+bBegun=true;fSinceMUp=0;bAuto=false;
+lastPokeT=myMils();bMPressed=myTch.length==1;
+pathArr[which]=[];pathBezArr[which]=[];
 pathArr[which].push(new Vec3f(mx,my,0));
-calcBezPath(which);
-resampVec(which);
+calcBezPath(which);resampVec(which);
 if(myTch.length==2){
 pathArr[(which+1)%2]=[];
 pathBezArr[(which+1)%2]=[];
 }}}}
 
 function onTouchMove(ev){
-if(ev.touches.length>2){
-myTch=[];
-return;}
+if(ev.touches.length>2){myTch=[];return;}
 ev.preventDefault();
-for (let tu of ev.touches){
-for (let i=0;i<myTch.length;i++){
-if (myTch[i].id===tu.identifier){
+for(let tu of ev.touches){
+for(let i=0;i<myTch.length;i++){
+if(myTch[i].id===tu.identifier){
 let mx=tu.clientX;let my=tu.clientY;
 myTch[i].x=mx;myTch[i].y=my;
 fSinceMUp=0;
 lastPokeT=myMils();
 let which=(myTch.length==1)?currPathI:(currPathI+i+1)%2;
 pathArr[which].push(new Vec3f(mx,my,0));
-calcBezPath(which);
-resampVec(which);
+calcBezPath(which);resampVec(which);
 break;}}}}
 
 function onTouchEnd(ev){
 ev.preventDefault();
-myTch=[];
-bAuto=false;
-bSpecialCase=false;
-bMPressed=false;
-lastPokeT=myMils();
-fSinceMUp=0;
-}
+myTch=[];bAuto=false;
+bSpecialCase=bMPressed=false;
+lastPokeT=myMils();fSinceMUp=0;}
 
 function getPathLen(path){
-let len=0;
-for(let i=0;i<(path.length-1);i++){
+let len=0;for(let i=0;i<(path.length-1);i++){
 let lo=path[i],hi=path[i+1];
 let dx=lo.x-hi.x,dy=lo.y-hi.y;
 len+=Math.sqrt(dx*dx+dy*dy);
 }return len;}
 
 function calcBezPath(pathIndex){
-const nBez=10;
-let path=pathArr[pathIndex];
+const nBez=10;let path=pathArr[pathIndex];
 pathBezArr[pathIndex]=[];
 let nSourcePts=path.length;
 let p0=new Vec3f();let p1=new Vec3f();
 let p2=new Vec3f();let p3=new Vec3f();
 let last_pt=new Vec3f();let next_pt=new Vec3f();
-if(nSourcePts<5){
-for(let g=0;g<nSourcePts;g++){
+if(nSourcePts<5){for(let g=0;g<nSourcePts;g++){
 let src=path[g];
 pathBezArr[pathIndex].push(new Vec3f(src.x,src.y,0));
-}}else{
-for(let i=0;i<nSourcePts;i++){
-if(i==1){
-p3=path[1],p0=path[0];next_pt=path[2];
+}}else{for(let i=0;i<nSourcePts;i++){
+if(i==1){p3=path[1],p0=path[0];next_pt=path[2];
 last_pt.set(p0.x-(p3.x-p0.x)/4,p0.y-(p3.y-p0.y)/4,0);
-}else if(i==0){
-next_pt=path[1],p3=path[0];
+}else if(i==0){next_pt=path[1],p3=path[0];
 p0.set(p3.x-(next_pt.x-p3.x)/4,p3.y-(next_pt.y-p3.y)/4,0);
 last_pt.set(p3.x-(next_pt.x-p3.x)/2,p3.y-(next_pt.y-p3.y)/2,0);
-}else if(i==nSourcePts-1){
-p3=path[i],p0=path[i-1];
+}else if(i==nSourcePts-1){p3=path[i],p0=path[i-1];
 last_pt=path[i-2];next_pt=p3;
 }else{p3=path[i],p0=path[i-1];
-last_pt=path[i-2];next_pt=path[i+1];
-}
+last_pt=path[i-2];next_pt=path[i+1];}
 let dx0=p0.x-last_pt.x;let dy0=p0.y-last_pt.y;
 let d0=Math.sqrt(dx0*dx0+dy0*dy0);
 let dx1=p3.x-p0.x;let dy1=p3.y-p0.y;
@@ -553,11 +475,8 @@ let tan_outz=(d2-p0.z)/bias;
 let p1x=p0.x+tan_inx;let p1y=p0.y+tan_iny;let p1z=p0.z+tan_inz;
 let p2x=p3.x-tan_outx;let p2y=p3.y-tan_outy;let p2z=p3.z-tan_outz;
 p1.set(p1x,p1y,p1z);p2.set(p2x,p2y,p2z);
-for(let j=0;j<nBez;j++){
-let t=j/nBez;
-let pt=calcPureBezVec3f(t,p0,p1,p2,p3);
-pathBezArr[pathIndex].push(pt);
-}}}}
+for(let j=0;j<nBez;j++){let pt=calcPureBezVec3f(j/nBez,p0,p1,p2,p3);
+pathBezArr[pathIndex].push(pt);}}}}
 
 function resampVec(I){
 let path=pathBezArr[I];
@@ -567,59 +486,40 @@ let nPathPts=path.length;
 if(nPathPts>0){
 let totalPathLength=getPathLen(path);
 let RSL=totalPathLength/nResampPts;
-let prevRem=RSL;let p=0;
-if(nPathPts<=1){
-for(p=0;p<nResampPts;p++){
-let lo=path[0];
+let prevRem=RSL;let p=0;if(nPathPts<=1){
+for(p=0;p<nResampPts;p++){let lo=path[0];
 let px=lo.x+p*0.0001;let py=lo.y+p*0.0001;let pz=lo.z+p*0.0001;
 resampledPath[p].set(px,py,pz);
-}}else{
-for(let i=0;i<nPathPts-1;i++){
+}}else{for(let i=0;i<nPathPts-1;i++){
 let lo=path[i];let hi=path[i+1];
 let Dx=hi.x-lo.x;let Dy=hi.y-lo.y;let Dz=hi.z-lo.z;
 let segLen=Math.sqrt(Dx*Dx+Dy*Dy);
-let ASL=segLen;
-let dx=Dx/segLen;let dy=Dy/segLen;
-let RSLdx=dx*RSL;let RSLdy=dy*RSL;
-let needsL=RSL-prevRem;
-if(ASL>=needsL){
-let remainder=ASL;
+let ASL=segLen;let dx=Dx/segLen;let dy=Dy/segLen;
+let RSLdx=dx*RSL;let RSLdy=dy*RSL;let needsL=RSL-prevRem;
+if(ASL>=needsL){let remainder=ASL;
 let px=lo.x+needsL*dx;let py=lo.y+needsL*dy;let pz=lo.z+Dz/2;
-if(p<nResampPts){
-resampledPath[p].set(px,py,pz);
+if(p<nResampPts){resampledPath[p].set(px,py,pz);
 remainder-=needsL;p++;}
 let nPtsToDo=Math.floor(remainder/RSL);
-for(let d=0;d<nPtsToDo;d++){
-px+=RSLdx;
-py+=RSLdy;
-if(p<nResampPts){
-resampledPath[p].set(px,py,pz);
-remainder-=RSL;p++;
-}}
-prevRem=remainder;
-}else{prevRem+=ASL;}
-}}}}
+for(let d=0;d<nPtsToDo;d++){px+=RSLdx;py+=RSLdy;
+if(p<nResampPts){resampledPath[p].set(px,py,pz);
+remainder-=RSL;p++;}}prevRem=remainder;
+}else{prevRem+=ASL;}}}}}
 
 function drawStem(path){
 if(fSinceMUp<nFadeFrames){
-let nSegs=path.length;
-if(nSegs>1){
+let nSegs=path.length;if(nSegs>1){
 let col=Math.max(0,nFadeFrames-fSinceMUp)/nFadeFrames;
-let skip=(bAuto)?6:1;
-for(let i=0;i<nSegs;i+=skip){
-let c=(i/nSegs)*col;
-let g=c*c*255;
+let skip=(bAuto)?6:1;for(let i=0;i<nSegs;i+=skip){
+let c=(i/nSegs)*col;let g=c*c*255;
 ctx.fillStyle="rgb("+g+","+g+","+g+")";
 ctx.beginPath();
 ctx.arc(path[i].x,path[i].y,0.5,0.5,tau);
 ctx.fill();}}}}
 
 function drawMesh(fromArr,toArr){
-let sizef=0.5;
-let c=0;
-let spacing=25;
-let nbsm1=nBezSamp-1;
-let nrsm1=nResamp-1;
+let sizef=0.5;let c=0;let spacing=25;
+let nbsm1=nBezSamp-1;let nrsm1=nResamp-1;
 let roundSamp=Math.round(currSamp);
 let splBreath=2.5*Math.sin(myMils()/5000);
 for(let i=0;i<nrsm1;i++){
@@ -735,39 +635,28 @@ function recenterGestures(){
 let mx=0,my=0;
 for(let i=0;i<(gestA.length);i++){mx+=gestA[i].x;my+=gestA[i].y;}
 for(let i=0;i<(gestB.length);i++){mx+=gestB[i].x;my+=gestB[i].y;}
-mx/=(gestA.length+gestB.length);
-my/=(gestA.length+gestB.length);
+mx/=(gestA.length+gestB.length);my/=(gestA.length+gestB.length);
 let dx=(myW/2-mx),dy=(myH/2-my);
 for(let i=0;i<(gestA.length);i++){gestA[i].x+=dx;gestA[i].y+=dy;}
-for(let i=0;i<(gestB.length);i++){gestB[i].x+=dx;gestB[i].y+=dy;}
-}
+for(let i=0;i<(gestB.length);i++){gestB[i].x+=dx;gestB[i].y+=dy;}}
 
 function generateNearDupGesgture(gIn){
-let gOut=[];
-let nPtsm1=(gIn.length-1);
-let rAmp=myW*myRAB(0.618,1.618);
-let r1=myRAB(0,rAmp*0.25);
-let r2=rAmp-r1;
+let gOut=[];let rAmp=myW*myRAB(0.618,1.618);
+let r1=myRAB(0,rAmp*0.25);let r2=rAmp-r1;
 for(let i=0;i<(gIn.length-1);i++){
 let px=gIn[i].x,py=gIn[i].y;
 let qx=gIn[i+1].x,qy=gIn[i+1].y;
 let r=myMap(i,0,gIn.length,r1-(rAmp/2),r2-(rAmp/2));
-let dx=qx-px,dy=qy-py;
-let dh=Math.sqrt(dx*dx+dy*dy);
-if(dh>0){
-let gx=px+r*dy/dh;
-let gy=py-r*dx/dh;
-gx=(gx+px)/2;
-gy=(gy+(py-r))/2;
+let dx=qx-px,dy=qy-py;let dh=Math.sqrt(dx*dx+dy*dy);
+if(dh>0){let gx=px+r*dy/dh;let gy=py-r*dx/dh;
+gx=(gx+px)/2;gy=(gy+(py-r))/2;
 gx=myW*myMap(gx/myW,0.1,0.9,-0.1,1.1);
 gOut.push(new Vec3f(gx,gy,0));
 }}return gOut;}
 
 function generateSteerGest(lr){
-let gest=[];
-let nSteerPts=myRInt(40,120);
-let cy=myH*myRAB(0.4,0.6);
-let cx=0.5;
+let gest=[];let nSteerPts=myRInt(40,120);
+let cy=myH*myRAB(0.4,0.6);let cx=0.5;
 if(lr>0.5){cx=myW*myRAB(0.6,0.75);
 }else if(lr<-0.5){cx=myW*myRAB(0.25,0.4);
 }else{cx=myW*myRAB(0.4,0.6);}
@@ -787,26 +676,19 @@ px+=dx;py+=dy;t+=dt;
 
 function generateScribbleGest(){
 let nTurns=getOpt([[1,35],[2,30],[3,12],[4,10],[5,10],[6,3]]);
-let noiSpd=myRAB(0.05,0.5);
-let gest=[];
-let cx=myW*myRAB(0.45,0.55);
-let cy=myH*myRAB(0.45,0.55);
-let toff=myRAB(0,100);
-let ori=myRAB(0,tau);
-let ecc=myRAB(1,1.5);
-let rMag=myRAB(0.1,0.4);
-let rVar=myRAB(0.1,0.9);
-let sgn=(myR01()<0.1)?-1:1;
+let noiSpd=myRAB(0.05,0.5);let gest=[];
+let cx=myW*myRAB(0.45,0.55);let cy=myH*myRAB(0.45,0.55);
+let toff=myRAB(0,100);let ori=myRAB(0,tau);
+let ecc=myRAB(1,1.5);let rMag=myRAB(0.1,0.4);
+let rVar=myRAB(0.1,0.9);let sgn=(myR01()<0.1)?-1:1;
 let dcx=Math.pow(myR01(),2)*myRAB(0,0.1);
 let nScribPts=nTurns*60;
 for(let i=0;i<nScribPts;i++){
 let t=myMap(i,0,nScribPts,0,sgn*tau*nTurns);
 let rn=myNoise(toff-t*noiSpd);
 let r=myMap(rn,0,1,1-rVar,1);
-let rx=myH*r*rMag;
-let ry=myH*r*rMag*ecc;
-let x=rx*Math.cos(t);
-let y=ry*Math.sin(t);
+let rx=myH*r*rMag;let ry=myH*r*rMag*ecc;
+let x=rx*Math.cos(t);let y=ry*Math.sin(t);
 let ox=cx+myW*myMap(i,0,nScribPts,-dcx,dcx);
 let px=ox+x*Math.cos(ori)-y*Math.sin(ori);
 let py=cy+x*Math.sin(ori)+y*Math.cos(ori);
@@ -814,12 +696,9 @@ gest.push(new Vec3f(px,py,0));
 }return gest;}
 
 function generateBezControlPointSet(nBezSets,cy){
-let nControlPts=1+nBezSets*3;
-let cPts=[];
-let x0=0.1,x1=0.9;
-let xp=myRAB(0.5,1);
-if(myR01()<0.5){xp=1/xp;}
-let wig=0.3;
+let nControlPts=1+nBezSets*3;let cPts=[];
+let x0=0.1,x1=0.9;let xp=myRAB(0.5,1);
+if(myR01()<0.5){xp=1/xp;}let wig=0.3;
 for(let i=0;i<nControlPts;i++){
 let t=myMap(i,0,nControlPts-1,0,1);
 let tx=Math.pow(t,xp);
@@ -844,8 +723,7 @@ class Vec3f{
 constructor(inx,iny,inz){
 if(inx===undefined){this.set(0,0,0);
 }else{this.set(inx,iny,inz);}}
-set(inx,iny,inz){
-this.x=inx;this.y=iny;this.z=inz;}}
+set(inx,iny,inz){this.x=inx;this.y=iny;this.z=inz;}}
 
 function myMap(val,a1,b1,a2,b2){
 return a2+(b2-a2)*((val-a1)/(b1-a1));}
@@ -858,38 +736,42 @@ const freqArr=[7,17,31,67,109];
 const phasArr=[0.3,0.7,1.1,1.7,2.3];
 let val=0,amp=0.5;
 for(let i=0;i<freqArr.length;i++){
-let freq=freqArr[i]*0.2;
-let phas=phasArr[i];
+let freq=freqArr[i]*0.2;let phas=phasArr[i];
 val+=amp*Math.sin(phas+freq*x);
-amp*=0.5;
-}return (1+val)/2;
-}
+amp*=0.5;}return (1+val)/2;}
 
-function myR01(){
-let r=fxrand();r=~~(r*32768)/32768;
-return r;
-}
+// https://docs.artblocks.io/creator-docs/creator-onboarding/readme/
+class Rnd{
+constructor(){
+this.useA=false;
+let sfc32=function(uint128Hex){
+let a=parseInt(uint128Hex.substring(0,8),16);
+let b=parseInt(uint128Hex.substring(8,16),16);
+let c=parseInt(uint128Hex.substring(16,24),16);
+let d=parseInt(uint128Hex.substring(24,32),16);
+return function(){
+a|=0;b|=0;c|=0;d|=0;
+let t=(((a+b)|0)+d)|0;d=(d+1)|0;a=b^(b>>>9);
+b=(c+(c<<3))|0;c=(c<<21)|(c>>>11);c=(c+t)|0;
+return(t>>>0)/4294967296;
+};};
+this.prngA=new sfc32(tokenData.hash.substring(2,34));
+this.prngB=new sfc32(tokenData.hash.substring(34,66));
+for(let i=0;i<1e6;i+=2){this.prngA();this.prngB();}
+}random_dec(){this.useA=!this.useA;
+return this.useA?this.prngA():this.prngB();}}
+
+function myRandomReset(newhash){
+tokenData.hash=newhash?newhash:PHASH; 
+myABRandom=new Rnd();}
+
+function myR01(){let r=myABRandom.random_dec();r=~~(r*32768)/32768;return r;}
+function myRA(a){return (a*myR01());}
 function myRAB(a,b){return a+((b-a)*myR01());}
 function myRInt(a,b){return Math.floor(myRAB(a,b+1));}
-function getRandomFxhash(){return "oo"+Array(49).fill(0).map(_=>alphabet[(Math.random()*alphabet.length)|0]).join('');
-}
-function myRandomReset(newhash){
-fxhash=newhash?newhash:THE_PRIMARY_HASH;
-fxhashTrunc=fxhash.slice(2);
-regex=new RegExp(".{"+((fxhashTrunc.length/4)|0)+"}","g");
-hashes=fxhashTrunc.match(regex).map((h)=>b58dec(h));
-fxrand=sfc32(...hashes);
-_gaussian_previous=false;
-_y2=0;
-}
-
 const randPick=(arr)=>arr[(myR01()*arr.length)|0];
-const getOpt=function (options){
-	let choices=[];
-	for(let i in options){
-		choices=choices.concat(new Array(options[i][1]).fill(options[i][0]));
-	}
-	return randPick(choices);
-};
+const getOpt=function(options){let choices=[];for(let i in options){
+choices=choices.concat(new Array(options[i][1]).fill(options[i][0]));
+}return randPick(choices);};
 
 setup();
