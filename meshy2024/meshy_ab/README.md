@@ -10,6 +10,10 @@
 
 In its interactive mode, the Meshy drawing environment develops a responsive mesh using the participant's two most recent marks. To get started, draw two gestural strokes using your mouse, touchpad, or multitouch tablet surface. After thirty seconds without interaction, Meshy enters a self-playing generative mode. Each Meshy token is initialized with a uniquely generated composition that can be recalled using the "r" key, and whose space of possibilities can be explored using the "n" key.
 
+#### Creative Credits
+
+Meshy was originally developed by Golan Levin in C++ in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official NFT release has been ported to pure JavaScript using the HTML5 Canvas API.
+
 
 ---
 
