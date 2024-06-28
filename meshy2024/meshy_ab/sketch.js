@@ -17,7 +17,7 @@
 // r: Reset system
 // h: show Help
 
-const canvas=document.getElementById('myCanvas');
+let Cnvs;
 let myABRandom;let myABFeatures;let meshyStyle=0;
 let ctx,nClx,currSamp,fSinceMUp;
 let currAutoF=0;let currPathI=0;
@@ -41,8 +41,8 @@ const T=true;
 let myMX=0;let myMY=0;
 let splStr=10;
 let myW,myH;
-let pathArr=[];
-let pathBezArr=[];
+let pathAr=[];
+let pathBzAr=[];
 let drawArr=[];
 let bt=[];
 let bt2=[];
@@ -71,6 +71,9 @@ let clix=[];
 let CHASH;
 
 function setup(){
+Cnvs=document.createElement('canvas');
+Cnvs.width=720;Cnvs.height=405;
+document.body.appendChild(Cnvs);
 setInterval(myDraw,1000/60);
 appStartT=Date.now();lastPokeT=startDebugT=0;
 onResizeCanvas();
@@ -83,10 +86,10 @@ document.addEventListener('fullscreenchange',onResizeCanvas);
 document.addEventListener('webkitfullscreenchange',onResizeCanvas);
 document.addEventListener('mozfullscreenchange',onResizeCanvas);
 document.addEventListener('msfullscreenchange',onResizeCanvas);
-canvas.addEventListener('touchstart',onTouchStart);
-canvas.addEventListener('touchmove',onTouchMove);
-canvas.addEventListener('touchend',onTouchEnd);
-canvas.style.cursor='crosshair';
+Cnvs.addEventListener('touchstart',onTouchStart);
+Cnvs.addEventListener('touchmove',onTouchMove);
+Cnvs.addEventListener('touchend',onTouchEnd);
+Cnvs.style.cursor='crosshair';
 CHASH=tokenData.hash;
 myRandomReset(CHASH);
 myABFeatures=calculateFeatures(tokenData);
@@ -97,19 +100,19 @@ initMeshy();}
 function onResizeCanvas(){
 const pxRat=window.devicePixelRatio||1;
 myW=window.innerWidth;myH=window.innerHeight;
-canvas.width=myW*pxRat;canvas.height=myH*pxRat;
-canvas.style.width=myW+'px';canvas.style.height=myH+'px';
-ctx=canvas.getContext('2d');ctx.scale(pxRat,pxRat);}
+Cnvs.width=myW*pxRat;Cnvs.height=myH*pxRat;
+Cnvs.style.width=myW+'px';Cnvs.style.height=myH+'px';
+ctx=Cnvs.getContext('2d');ctx.scale(pxRat,pxRat);}
 
 function initMeshy(){
 fSinceMUp=currSamp=nClx=currPathI=0;
 helpStartT=myMils();
-pathArr=new Array(maxNPaths);
-pathBezArr=new Array(maxNPaths);
+pathAr=new Array(maxNPaths);
+pathBzAr=new Array(maxNPaths);
 drawArr=new Array(maxNPaths);
 makeBezArrays();
 for(let i=0;i<maxNPaths;i++){
-pathArr[i]=[];pathBezArr[i]=[];
+pathAr[i]=[];pathBzAr[i]=[];
 drawArr[i]=new Array(nResamp);
 for(let j=0;j<nResamp;j++){
 drawArr[i][j]=new Vec3f();
@@ -131,11 +134,11 @@ let elapsed=myMils()-lastPokeT;bAut=(elapsed>waitToAutoDur);
 let splen=autoLen-auDel;let pt;if(bAut&&!prevbAut){
 currAutoF=0;autoPress();}else if(!bAut&&prevbAut){
 pt=getAutoPt(currAutoF/splen);myMouseReleased(pt.x,pt.y);
-}else if(bAut){canvas.style.cursor='none';
+}else if(bAut){Cnvs.style.cursor='none';
 if(currAutoF<autoLen){currAutoF++;if(currAutoF<splen){
 pt=getAutoPt(currAutoF/splen);myMouseDragged(pt.x,pt.y);}
 }else{pt=getAutoPt(currAutoF/splen);myMouseReleased(pt.x,pt.y);autoPress();}
-}else if(!bAut){canvas.style.cursor='crosshair';}}}
+}else if(!bAut){Cnvs.style.cursor='crosshair';}}}
 
 let ap1,ap2,ap3,ap4;
 function autoPress(){currAutoF=0;let a=-0.3;let b=1.3;
@@ -153,8 +156,8 @@ return new Vec3f(pt.x,pt.y,0);}
 function drawDebug(){
 if(bDrawDebug){let cols=["lime","red"];for(let j=0;j<2;j++){
 ctx.strokeStyle=cols[j];ctx.beginPath();
-for(let i=0;i<pathArr[j].length;i++){
-let px=pathArr[j][i].x;let py=pathArr[j][i].y;
+for(let i=0;i<pathAr[j].length;i++){
+let px=pathAr[j][i].x;let py=pathAr[j][i].y;
 if(i==0){ctx.moveTo(px,py);}ctx.lineTo(px,py);}ctx.stroke();}
 let elapsed=myMils()-startDebugT;if(bAut||(elapsed>120000)){
 bDrawDebug=F;}}}
@@ -163,7 +166,7 @@ function simulate(){currSamp++;fSinceMUp++;blurGesture();}
 
 function blurGesture(){
 if(bMPressed){let A=0.025;let B=1-2*A;
-let path=pathArr[currPathI];let npm1=path.length-1;
+let path=pathAr[currPathI];let npm1=path.length-1;
 if(npm1>2){for(let i=1;i<npm1;i++){
 let v0=path[i-1],v1=path[i],v2=path[i+1];
 let px=A*v0.x+B*v1.x+A*v2.x;let py=A*v0.y+B*v1.y+A*v2.y;
@@ -173,18 +176,16 @@ calcBezPath(currPathI);resampVec(currPathI);}}}
 function render(){
 if(nClx>0){let offset=(bMPressed)?0:-1;
 let fromI=(currPathI-1+offset+nPaths)%nPaths;
-let toI=(currPathI+offset+nPaths)%nPaths;
-drawStem(pathBezArr[toI]);
-if((toI%2==1)||bAut||(myTch.length>1)){drawStem(pathBezArr[fromI]);}
+let toI=(currPathI+offset+nPaths)%nPaths;drawStem(pathBzAr[toI]);
+if((toI%2==1)||bAut||(myTch.length>1)){drawStem(pathBzAr[fromI]);}
 if(nClx!=1||currPathI!=1||bSpecialCase){
 let num=nPaths-1;if(nClx<nPaths){num=currPathI;}
 for(let i=0;i<=num;i++){
 fromI=(i-1+offset+nPaths)%nPaths;toI=(i+offset+nPaths)%nPaths;
 if(toI%2==1){let fromArr=drawArr[fromI];let toArr=drawArr[toI];
 if(nPaths==2||currPathI!=(fromI-offset)%nPaths){
-drawMesh(fromArr,toArr);}}}}}else{
-let n=Math.min(nClx,nPaths);
-for(let p=0;p<=n;p++){drawStem(pathBezArr[p]);}}}
+drawMesh(fromArr,toArr);}}}}}else{let n=Math.min(nClx,nPaths);
+for(let p=0;p<=n;p++){drawStem(pathBzAr[p]);}}}
 
 function drawInfo(){
 if(bShowInf){ctx.font=txSize+"px 'Times New Roman'";
@@ -219,13 +220,13 @@ ctx.fillText(str[i],myW/2,myH/4+i*txSize*1.125);}}}}
 
 function createStarter(){	
 nClx=currPathI=0;
-for(let p=0;p<pathBezArr.length;p++){
-pathArr[p]=[];pathBezArr[p]=[];}
+for(let p=0;p<pathBzAr.length;p++){
+pathAr[p]=[];pathBzAr[p]=[];}
 genStarterGestures();
 let srcGest=[gestA,gestB];
 for(let g=0;g<2;g++){let aGest=srcGest[g];
 for(let i=0;i<aGest.length;i++){
-let p=aGest[i];pathArr[currPathI].push(new Vec3f(p.x,p.y,0));}
+let p=aGest[i];pathAr[currPathI].push(new Vec3f(p.x,p.y,0));}
 calcBezPath(currPathI);resampVec(currPathI);
 nClx++;currPathI=nClx%nPaths;}
 fSinceMUp=nFadeFrames;}
@@ -245,56 +246,53 @@ createStarter();
 }else{bShowInf=!bShowInf;if(bShowInf){helpStartT=myMils();}}}
 
 function handleToggleClix(mx,my){
-clix.push(new Vec3f(mx,my,0));
-if(clix.length>10){clix.splice(0,1);let dh=0;
+clix.push(new Vec3f(mx,my,0));if(clix.length>10){clix.splice(0,1);let dh=0;
 for(let i=0;i<9;i++){let dx=clix[i+1].x-clix[i].x;let dy=clix[i+1].y-clix[i].y;
 dh=Math.max(dh,Math.sqrt(dx*dx+dy*dy));}
 if(dh<20){clix=[];togFullScr();}}}
 
 function togFullScr(){
 if(!document.fullscreenElement&&!document.webkitFullscreenElement){
-if(canvas.requestFullscreen){canvas.requestFullscreen();
-}else if(canvas.webkitRequestFullscreen){canvas.webkitRequestFullscreen();}
+if(Cnvs.requestFullscreen){Cnvs.requestFullscreen();
+}else if(Cnvs.webkitRequestFullscreen){Cnvs.webkitRequestFullscreen();}
 }else{if(document.exitFullscreen){document.exitFullscreen();
 }else if(document.webkitExitFullscreen){document.webkitExitFullscreen();}}}
 
 function onMouseMove(ev){
-lastPokeT=myMils();const rect=canvas.getBoundingClientRect();
+lastPokeT=myMils();const rect=Cnvs.getBoundingClientRect();
 myMX=ev.clientX-rect.left;myMY=ev.clientY-rect.top;
 if(bMPressed){myMouseDragged(myMX,myMY);}}
 
 function myMouseDragged(mx,my){
-bBegun=T;pathArr[currPathI].push(new Vec3f(mx,my,0));
+bBegun=T;pathAr[currPathI].push(new Vec3f(mx,my,0));
 fSinceMUp=0;calcBezPath(currPathI);resampVec(currPathI);}
 
 function onMouseDown(ev){
 bAut=F;bMPressed=T;lastPokeT=myMils();
-const rect=canvas.getBoundingClientRect();
+const rect=Cnvs.getBoundingClientRect();
 myMX=ev.clientX-rect.left;myMY=ev.clientY-rect.top;
 myMousePressed(myMX,myMY);handleToggleClix(myMX,myMY);}
 
 function myMousePressed(mx,my){
 if(!bBegun){begunT=myMils();
-pathArr[0]=[];pathArr[1]=[];
-pathBezArr[0]=[];pathBezArr[1]=[];
+pathAr[0]=[];pathAr[1]=[];pathBzAr[0]=[];pathBzAr[1]=[];
 currPathI=1;nClx=0;bBegun=T;}
 bSpecialCase=F;if((nClx==1)&&(currPathI==1)){
 bSpecialCase=T;}currPathI=nClx%nPaths;
-pathArr[currPathI]=[];pathBezArr[currPathI]=[];
-pathArr[currPathI].push(new Vec3f(mx,my,0));
-pathArr[currPathI].push(new Vec3f(mx+1,my+1,0));
+pathAr[currPathI]=[];pathBzAr[currPathI]=[];
+pathAr[currPathI].push(new Vec3f(mx,my,0));
+pathAr[currPathI].push(new Vec3f(mx+1,my+1,0));
 fSinceMUp=0;calcBezPath(currPathI);resampVec(currPathI);}
 
 function onMouseUp(ev){
 bAut=F;lastPokeT=myMils();
-const rect=canvas.getBoundingClientRect();
+const rect=Cnvs.getBoundingClientRect();
 myMX=ev.clientX-rect.left;myMY=ev.clientY-rect.top;
 myMouseReleased(myMX,myMY);}
 
 function myMouseReleased(mx,my){
 bMPressed=F;calcBezPath(currPathI);resampVec(currPathI);
-nClx++;currPathI=nClx%nPaths;
-fSinceMUp=0;bSpecialCase=F;}
+nClx++;currPathI=nClx%nPaths;fSinceMUp=0;bSpecialCase=F;}
 
 function onTouchStart(ev){
 if(ev.touches.length>2){myTch=[];return;}
@@ -312,11 +310,11 @@ which=currPathI;if(myTch.length<2){
 myTch.push({id:tu.identifier,x:mx,y:my});
 }}}if(which!=-1){bBegun=T;fSinceMUp=0;bAut=F;
 lastPokeT=myMils();bMPressed=myTch.length==1;
-pathArr[which]=[];pathBezArr[which]=[];
-pathArr[which].push(new Vec3f(mx,my,0));
+pathAr[which]=[];pathBzAr[which]=[];
+pathAr[which].push(new Vec3f(mx,my,0));
 calcBezPath(which);resampVec(which);
-if(myTch.length==2){pathArr[(which+1)%2]=[];
-pathBezArr[(which+1)%2]=[];}}}}
+if(myTch.length==2){pathAr[(which+1)%2]=[];
+pathBzAr[(which+1)%2]=[];}}}}
 
 function onTouchMove(ev){
 if(ev.touches.length>2){myTch=[];return;}
@@ -328,9 +326,8 @@ let mx=tu.clientX;let my=tu.clientY;
 myTch[i].x=mx;myTch[i].y=my;
 fSinceMUp=0;lastPokeT=myMils();
 let which=(myTch.length==1)?currPathI:(currPathI+i+1)%2;
-pathArr[which].push(new Vec3f(mx,my,0));
-calcBezPath(which);resampVec(which);
-break;}}}}
+pathAr[which].push(new Vec3f(mx,my,0));
+calcBezPath(which);resampVec(which);break;}}}}
 
 function onTouchEnd(ev){
 ev.preventDefault();myTch=[];bAut=F;
@@ -340,19 +337,18 @@ function getPathLen(path){
 let len=0;for(let i=0;i<(path.length-1);i++){
 let lo=path[i],hi=path[i+1];
 let dx=lo.x-hi.x,dy=lo.y-hi.y;
-len+=Math.sqrt(dx*dx+dy*dy);
-}return len;}
+len+=Math.sqrt(dx*dx+dy*dy);}return len;}
 
 function calcBezPath(pathIndex){
-const nBez=10;let path=pathArr[pathIndex];
-pathBezArr[pathIndex]=[];
+const nBez=10;let path=pathAr[pathIndex];
+pathBzAr[pathIndex]=[];
 let nSourcePts=path.length;
 let p0=new Vec3f();let p1=new Vec3f();
 let p2=new Vec3f();let p3=new Vec3f();
 let last_pt=new Vec3f();let next_pt=new Vec3f();
 if(nSourcePts<5){for(let g=0;g<nSourcePts;g++){
 let src=path[g];
-pathBezArr[pathIndex].push(new Vec3f(src.x,src.y,0));
+pathBzAr[pathIndex].push(new Vec3f(src.x,src.y,0));
 }}else{for(let i=0;i<nSourcePts;i++){
 if(i==1){p3=path[1],p0=path[0];next_pt=path[2];
 last_pt.set(p0.x-(p3.x-p0.x)/4,p0.y-(p3.y-p0.y)/4,0);
@@ -381,10 +377,10 @@ let p1x=p0.x+tan_inx;let p1y=p0.y+tan_iny;let p1z=p0.z+tan_inz;
 let p2x=p3.x-tan_outx;let p2y=p3.y-tan_outy;let p2z=p3.z-tan_outz;
 p1.set(p1x,p1y,p1z);p2.set(p2x,p2y,p2z);
 for(let j=0;j<nBez;j++){let pt=calcPureBezVec3f(j/nBez,p0,p1,p2,p3);
-pathBezArr[pathIndex].push(pt);}}}}
+pathBzAr[pathIndex].push(pt);}}}}
 
 function resampVec(I){
-let path=pathBezArr[I];
+let path=pathBzAr[I];
 let resampledPath=drawArr[I];
 let nResampPts=nResamp;
 let nPathPts=path.length;
@@ -652,4 +648,4 @@ const getOpt=function(options){let choices=[];for(let i in options){
 choices=choices.concat(new Array(options[i][1]).fill(options[i][0]));
 }return randPick(choices);};
 
-setup();
+document.addEventListener('DOMContentLoaded',function(){setup();});
