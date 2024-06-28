@@ -1,3 +1,12 @@
+# AB Setup 
+
+*Meshy* (1998, revised 2024) is an interactive drawing environment in which the user's strokes scaffold a gauzy mesh of animated elements. The mesh continually bridges the user's two most recent marks; by drawing, users can tease the mesh in real-time. In addition to its interactive mode, each token is initialized with a uniquely generated mesh composition. 
+
+*Meshy* was originally developed in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official release has been ported from C++ to pure JavaScript using the HTML5 Canvas API.
+
+---
+
+
 # Standalone iOS App: 
 
 July 2024
