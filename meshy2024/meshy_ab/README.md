@@ -23,6 +23,10 @@ Meshy was originally developed by Golan Levin in C++ in 1998, while Levin was a 
 
 * https://token.sepolia.artblocks.io/0xd574e7c79325ac6124ec58ef746ab285d72755a1/
 
+#### Sales Notes
+
+This official NFT version of Meshy was commissioned by Verisart and Gazelli Art House, London.
+
 ---
 
 
