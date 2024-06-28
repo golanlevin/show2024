@@ -14,6 +14,10 @@ In its interactive mode, the Meshy drawing environment develops a responsive mes
 
 Meshy was originally developed by Golan Levin in C++ in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official NFT release has been ported to pure JavaScript using the HTML5 Canvas API.
 
+#### License
+
+* CC BY-NC 4.0
+* https://creativecommons.org/licenses/by-nc/4.0/
 
 ---
 
