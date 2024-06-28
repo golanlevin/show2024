@@ -21,7 +21,7 @@ Meshy was originally developed by Golan Levin in C++ in 1998, while Levin was a 
 
 #### Base URI
 
-* https://api.artblocks.io/token/
+* https://token.sepolia.artblocks.io/0xd574e7c79325ac6124ec58ef746ab285d72755a1/
 
 ---
 
