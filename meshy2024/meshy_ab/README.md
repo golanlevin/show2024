@@ -6,6 +6,8 @@
 
 *Meshy* was originally developed in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official NFT release was produced in July 2024 for the exhibition "Awaken, Metamagical Hands", curated by John Maeda and Robert Norton for Gazelli Art House, London. The code has been ported from C++ and Java (Processing) to pure JavaScript using the HTML5 Canvas API.
 
+To get started with *Meshy*, draw two gestural strokes using your mouse, touchpad, or multitouch tablet surface. After thirty seconds without interaction, *Meshy* will enter a self-playing generative mode. Each Meshy token is initialized with a uniquely generated composition that can be recalled using the "r" key, and whose space of possibilities can be explored using the "n" key.
+
 #### Display Notes
 
 In its interactive mode, the Meshy drawing environment develops a responsive mesh using the participant's two most recent marks. To get started, draw two gestural strokes using your mouse, touchpad, or multitouch tablet surface. After thirty seconds without interaction, Meshy will enter a self-playing generative mode. Each Meshy token is initialized with a uniquely generated composition that can be recalled using the "r" key, and whose space of possibilities can be explored using the "n" key.
