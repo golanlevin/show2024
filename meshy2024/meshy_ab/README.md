@@ -2,9 +2,9 @@
 
 #### Project Description
 
-*Meshy* (1998, revised 2024) is an interactive gestural abstraction in which a participant's strokes are used to scaffold a gauzy mesh of animated elements. The mesh continually bridges the user's two most recent marks; by drawing, users can tease the mesh in real-time. In addition to its interactive mode, each token is initialized with a uniquely generated mesh composition. 
+*Meshy* (1998, minted 2024) is an interactive gestural abstraction in which a participant's strokes are used to scaffold a gauzy mesh of animated elements. The mesh continually bridges the user's two most recent marks; by drawing, users can tease the mesh in real-time. In addition to its interactive mode, each token is initialized with a uniquely generated mesh composition.
 
-*Meshy* was originally developed in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official NFT release has been ported from C++ and Java (Processing) to pure JavaScript using the HTML5 Canvas API, and was produced in July 2024 for the exhibition "Awaken, Metamagical Hands", curated by John Maeda and Robert Norton for Verisart and Gazelli Art House, London.
+*Meshy* was originally developed in 1998, while Levin was a researcher in the Aesthetics and Computation Group at the MIT Media Laboratory. This official NFT release was produced in July 2024 for the exhibition "Awaken, Metamagical Hands", curated by John Maeda and Robert Norton for Gazelli Art House, London. The code has been ported from C++ and Java (Processing) to pure JavaScript using the HTML5 Canvas API.
 
 #### Display Notes
 
