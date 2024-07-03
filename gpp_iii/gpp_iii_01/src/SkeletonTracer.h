@@ -11,6 +11,8 @@
 #include "ofMain.h"
 #include "ofxCv.h" // for Tracker
 #include "ofxGui.h"
+
+#include "SkeletonBoneDrawer.h"
 #include "SkeletonDefs.h"
 
 
@@ -61,7 +63,8 @@ class SkeletonTracer {
 	void	smoothBones();
 	void	drawStateImage();
     void    drawTheRawDrawing(float dx, float dy, float dw);
-    void    drawCurrentSkeletons(float dx, float dy, float dw, bool bcol);
+    void    drawCurrentSkeletons(float dx, float dy, float dw, float thickness, float colorPct, bool bcol);
+    void    displayCurrentSkeletons(float dx, float dy, float dw, float th, float r,float g,float b);
 	ofPolyline getSmoothed (ofPolyline inputBone);
 	
 	ofPolyline			tempBone;
@@ -111,10 +114,11 @@ class SkeletonTracer {
     bool isPointInBbox(float x, float y, cv::Rect bbox);
     vector<PersonSkeleton>  currentSkeletons;
     
-    
+    SkeletonBoneDrawer  *skibidi;
     
     void copyROICv(unsigned char* srcBuf, unsigned char* dstBuf,
                    int width, int height, int roi_x, int roi_y, int roi_width, int roi_height);
 
 };
+
 

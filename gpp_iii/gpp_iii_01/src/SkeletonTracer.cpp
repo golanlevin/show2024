@@ -31,6 +31,7 @@ void SkeletonTracer::initialize (int w, int h){
 	bNormalizeTheRawDrawing = true;
 	
 	liveColor		= 0xFF0000;
+    skibidi = new SkeletonBoneDrawer();
 }
 
 
@@ -77,16 +78,29 @@ void SkeletonTracer::collateRawDrawingIntoLabeledSkeletons(const std::vector<Per
             PersonContour jthPersonContour = personContours[j];
             PersonSkeleton ps;
             
+            ps.contourIndex = j;
             ps.timestamp = jthPersonContour.timestamp;
             ps.label = jthPersonContour.label;
             ps.age = jthPersonContour.age;
             ps.r = jthPersonContour.r;
             ps.g = jthPersonContour.g;
             ps.b = jthPersonContour.b;
+            ps.cx = jthPersonContour.cx;
+            ps.cy = jthPersonContour.cy;
+            
+            float rx = jthPersonContour.bbox.x;
+            float ry = jthPersonContour.bbox.y;
+            float rw = jthPersonContour.bbox.width;
+            float rh = jthPersonContour.bbox.height;
+            if (bNormalizeTheRawDrawing){
+                rx /= buffer_w; ry /= buffer_w;
+                rw /= buffer_w; rh /= buffer_w;
+            } ps.bbox = ofRectangle(rx,ry,rw,rh);
             
             currentSkeletons.push_back(ps);
         }
        
+        
         for (int i=0; i<nBones; i++){
             PolylinePlus aBone = theRawDrawing[i];
             ofPolyline aBonePolyline = aBone.polyline;
@@ -570,15 +584,21 @@ void SkeletonTracer::compileLiveBonesIntoRawDrawing(){
 }
 
 //------------------------------------------------------------
-void SkeletonTracer::drawCurrentSkeletons(float dx, float dy, float dw, bool bcol){
+void SkeletonTracer::drawCurrentSkeletons(float dx, float dy, float dw, 
+                                          float thickness, float colorPct, bool bcol){
     int nCurrentSkeletons = (int) currentSkeletons.size();
     if (nCurrentSkeletons > 0){
         ofNoFill();
+        ofSetLineWidth(thickness);
+        
         ofPushMatrix();
         ofTranslate(dx,dy);
         float scaleFactor = (bNormalizeTheRawDrawing) ? dw : (dw/(float)buffer_w);
         ofScale(scaleFactor,scaleFactor);
+        
+        const int nCols = 5;
     
+        /*
         static const unsigned char cols[6][3] = {
             {255, 0, 0},    // Red
             {255, 0, 255},  // Magenta
@@ -588,23 +608,64 @@ void SkeletonTracer::drawCurrentSkeletons(float dx, float dy, float dw, bool bco
             {255, 100, 50}  
         };
         
+        
+         static const unsigned char cols[nCols][3] = {
+             {19, 96, 82},
+             {67, 127, 62},
+             {179, 206, 101},
+             {255, 235, 92},
+             {255, 90, 50},
+         };
+         */
+        
+        static const unsigned char cols[nCols][3] = {
+            {4, 40, 63},
+            {0, 91, 82},
+            {158, 193, 49},
+            {219, 242, 38},
+            {214, 212, 142}
+        };
+         
+
         for (int i=0; i<nCurrentSkeletons; i++){
             PersonSkeleton ithSkeleton = currentSkeletons[i];
             if (bcol){
+                
+                /*
                 float r = ithSkeleton.r;
                 float g = ithSkeleton.g;
                 float b = ithSkeleton.b;
                 
-                /*
-                int ci = (ithSkeleton.label)%6;
-                float amt = 0;
+                float frac = 0;//0.9*(1- dy/FBOH);
+                r = ofLerp(r,255, frac);
+                g = ofLerp(g,255, frac);
+                b = ofLerp(b,255, frac);
+                
+                r = 255 * powf(r/255, 2.0);
+                g = 255 * powf(g/255, 2.0);
+                b = 255 * powf(b/255, 2.0);
+                 */
+            
+                
+                int ci = (ithSkeleton.label + (int)(dy/(FBOH/10))  )%nCols;
+                float amt = 0;//1 - (dy / FBOH);
                 float r = ofLerp(cols[ci][0], 255, amt);
                 float g = ofLerp(cols[ci][1], 255, amt);
                 float b = ofLerp(cols[ci][2], 255, amt);
-                 */
                 
+                // CLOBBER
+                /*
+                r = ithSkeleton.r;
+                g = ithSkeleton.g;
+                b = ithSkeleton.b;
+                 */
+            
+                r *= colorPct;
+                g *= colorPct;
+                b *= colorPct;
                 ofSetColor(r,g,b);
             } else {
+                ofSetLineWidth(1.0);
                 ofSetColor(255);
             }
             
@@ -622,6 +683,37 @@ void SkeletonTracer::drawCurrentSkeletons(float dx, float dy, float dw, bool bco
         ofPopMatrix();
     }
 }
+
+//------------------------------------------------------------
+void SkeletonTracer::displayCurrentSkeletons (float dx, float dy, float dw, float th, float r,float g,float b){
+    int nCurrentSkeletons = (int) currentSkeletons.size();
+    if (nCurrentSkeletons > 0){
+        
+        ofPushMatrix();
+        ofTranslate(dx,dy);
+        float scaleFactor = (bNormalizeTheRawDrawing) ? dw : (dw/(float)buffer_w);
+        ofScale(scaleFactor,scaleFactor);
+        ofFill();
+        ofSetColor(r,g,b);
+        
+        float thickness = 0.5;
+        thickness *= th;
+        if (bNormalizeTheRawDrawing){
+            thickness /= buffer_w;
+        }
+
+        for (int i=0; i<nCurrentSkeletons; i++){
+            PersonSkeleton ithSkeleton = currentSkeletons[i];
+            int nBones = (int) ithSkeleton.bones.size();
+            for (int j=0; j<nBones; j++){
+                ofPolyline jthBone = ithSkeleton.bones[j];
+                skibidi->drawScaled (jthBone, thickness);
+            }
+        }
+        ofPopMatrix();
+    }
+}
+
 
 //------------------------------------------------------------
 void SkeletonTracer::drawTheRawDrawing(float dx, float dy, float dw){

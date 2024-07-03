@@ -59,7 +59,7 @@ class PoissonFill{public:
   /// \brief Process a texture (RGBA)
   ///
   /// \param tex the texture to be processed
-  void process(ofTexture& tex){
+  void process(ofTexture& tex, float unif){
     int i;
     pass(downs[0],&tex,NULL);
     for (i = 1; i < depth; i++){
@@ -84,7 +84,7 @@ class PoissonFill{public:
     p.begin();
     ofClear(0,0,0,0);
     shader.begin();
-    
+
     // <!> theoratically we can do boundry testing with w/h
     // but the result looks identical without it,
     // so for the sake of speed this is commented out
@@ -93,6 +93,8 @@ class PoissonFill{public:
     // shader.setUniform1i("w",tex1->getWidth() );
     // shader.setUniform1i("h",tex1->getHeight());
     
+      float feedbackChanger = 0.03; //0.03 ... -0.05 ;  0.04*sin(ofGetElapsedTimef()/5.0) - 0.01;
+    shader.setUniform1f("unif", feedbackChanger  );
     shader.setUniform1f("u_time", ofGetElapsedTimef());
     shader.setUniformTexture("unf",*tex1,1);
     if (tex2 != NULL){
@@ -117,6 +119,7 @@ class PoissonFill{public:
       // uniform int h;
       uniform bool isup;
       uniform float u_time;
+      uniform float unif;
                              
       float h1(int i){
         if (i == 0 || i == 4){
@@ -170,14 +173,19 @@ class PoissonFill{public:
             vec4 myCol = vec4(acc.r/acc.a,acc.g/acc.a,acc.b/acc.a,1.0);
         
             // Simple dithering pattern
-            float ditherR = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 76.233)) + u_time) * 45758.5453);
-            float ditherG = fract(sin(dot(gl_FragCoord.xy, vec2(13.2345, 77.567)) + u_time) * 46567.1234);
-            float ditherB = fract(sin(dot(gl_FragCoord.xy, vec2(14.6789, 78.678)) + u_time) * 47456.2345);
+            float ttr = mod(u_time,10711.0) / 10711.0;
+            float ttg = mod(u_time,11083.0) / 11083.0;
+            float ttb = mod(u_time,11939.0) / 11939.0;
+            float ditherR = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898*ttr, 76.233)) + u_time) * 45758.5453);
+            float ditherG = fract(sin(dot(gl_FragCoord.xy, vec2(13.2345*ttg, 77.567)) + u_time) * 46567.1234);
+            float ditherB = fract(sin(dot(gl_FragCoord.xy, vec2(14.6789*ttb, 78.678)) + u_time) * 47456.2345);
             vec3 dither = vec3(ditherR, ditherG, ditherB);
             dither = (dither - 0.5) * 0.004; // Adjust the factor to control dithering strength
             myCol.rgb += dither;
        
             // gl_FragColor = vec4(acc.r/acc.a,acc.g/acc.a,acc.b/acc.a,1.0);
+    
+            myCol.rgb -= unif;
             gl_FragColor = vec4(myCol.r, myCol.g, myCol.b, 1.0);
 
           }
@@ -225,13 +233,15 @@ class PoissonFill{public:
           }else{
     
             vec4 myCol = vec4(acc.r/acc.a,acc.g/acc.a,acc.b/acc.a,1.0);
-        
-            // Simple dithering pattern
-            float ditherR = fract(sin(dot(gl_FragCoord.xy, vec2(15.1234, 79.456)) + u_time) * 45678.9123);
-            float ditherG = fract(sin(dot(gl_FragCoord.xy, vec2(14.2345, 78.567)) + u_time) * 44567.1234);
-            float ditherB = fract(sin(dot(gl_FragCoord.xy, vec2(13.6789, 77.678)) + u_time) * 43456.2345);
+    
+            float ttr = mod(u_time,10711.0) / 10711.0;
+            float ttg = mod(u_time,11083.0) / 11083.0;
+            float ttb = mod(u_time,11939.0) / 11939.0;
+            float ditherR = fract(sin(dot(gl_FragCoord.xy, vec2(15.1234, 79.456*ttr)) + u_time) * 45678.9123);
+            float ditherG = fract(sin(dot(gl_FragCoord.xy, vec2(14.2345, 78.567*ttg)) + u_time) * 44567.1234);
+            float ditherB = fract(sin(dot(gl_FragCoord.xy, vec2(13.6789, 77.678*ttb)) + u_time) * 43456.2345);
             vec3 dither = vec3(ditherR, ditherG, ditherB);
-            dither = (dither - 0.5) * 0.004;
+            dither = (dither - 0.5) * 0.004 * 3.0;
             myCol.rgb += dither;
        
             // gl_FragColor = vec4(acc.r/acc.a,acc.g/acc.a,acc.b/acc.a,1.0);

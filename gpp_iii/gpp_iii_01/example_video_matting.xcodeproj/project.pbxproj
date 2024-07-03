@@ -38,6 +38,7 @@
 		67670A902C0D63F100E467C7 /* ofxSlider.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 67670A812C0D63F100E467C7 /* ofxSlider.cpp */; };
 		67670A912C0D63F100E467C7 /* ofxSliderGroup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 67670A832C0D63F100E467C7 /* ofxSliderGroup.cpp */; };
 		67670A922C0D63F100E467C7 /* ofxToggle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 67670A852C0D63F100E467C7 /* ofxToggle.cpp */; };
+		67BE65352C28D0EE003FED41 /* SkeletonBoneDrawer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 67BE65312C28D0EE003FED41 /* SkeletonBoneDrawer.cpp */; };
 		B6C77A06786470121B592F32 /* ofxTF2ThreadedModel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F96F040A7A8CDA51A02E27B8 /* ofxTF2ThreadedModel.cpp */; };
 		D3301F6A0B43BB293ED97C1D /* ofxCvShortImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8A4DD23693DFAB8EC05FAA5D /* ofxCvShortImage.cpp */; };
 		E212C821D1064B92DD953A42 /* ofxCvHaarFinder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A16CBF2E8CFE43AF54FE6F5 /* ofxCvHaarFinder.cpp */; };
@@ -300,6 +301,8 @@
 		67670A862C0D63F100E467C7 /* ofxToggle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxToggle.h; sourceTree = "<group>"; };
 		676F777537535D01BD0CF2E6 /* intrin_cpp.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = intrin_cpp.hpp; path = ../../../addons/ofxOpenCv/libs/opencv/include/opencv2/core/hal/intrin_cpp.hpp; sourceTree = SOURCE_ROOT; };
 		67AF0E794FA186DD25454CC9 /* calib3d.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = calib3d.hpp; path = ../../../addons/ofxOpenCv/libs/opencv/include/opencv2/calib3d/calib3d.hpp; sourceTree = SOURCE_ROOT; };
+		67BE65312C28D0EE003FED41 /* SkeletonBoneDrawer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SkeletonBoneDrawer.cpp; sourceTree = "<group>"; };
+		67BE65322C28D0EE003FED41 /* SkeletonBoneDrawer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SkeletonBoneDrawer.h; sourceTree = "<group>"; };
 		67C553CD2C2799EE003679D5 /* ofxPoissonFill.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ofxPoissonFill.hpp; sourceTree = "<group>"; };
 		684BC56AEDF39284E35B72D3 /* c_api.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = c_api.h; path = ../../../addons/ofxTensorFlow2/libs/tensorflow/include/tensorflow/c/eager/c_api.h; sourceTree = SOURCE_ROOT; };
 		69DF7DDD806D7FBA040E6EB7 /* opencl_clamdfft.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = opencl_clamdfft.hpp; path = ../../../addons/ofxOpenCv/libs/opencv/include/opencv2/core/opencl/runtime/opencl_clamdfft.hpp; sourceTree = SOURCE_ROOT; };
@@ -2365,6 +2368,8 @@
 				67254D1A2C260C5C001B1B5D /* SkeletonTracer.h */,
 				67254D1C2C260D28001B1B5D /* SkeletonDefs.h */,
 				67C553CD2C2799EE003679D5 /* ofxPoissonFill.hpp */,
+				67BE65312C28D0EE003FED41 /* SkeletonBoneDrawer.cpp */,
+				67BE65322C28D0EE003FED41 /* SkeletonBoneDrawer.h */,
 			);
 			path = src;
 			sourceTree = SOURCE_ROOT;
@@ -2617,6 +2622,7 @@
 				3D3756A37481A71546B6402B /* ofxTensorFlow2Utils.cpp in Sources */,
 				67670A8C2C0D63F100E467C7 /* ofxGuiGroup.cpp in Sources */,
 				6744F6982C0E89E10049E66C /* RunningBackground.cpp in Sources */,
+				67BE65352C28D0EE003FED41 /* SkeletonBoneDrawer.cpp in Sources */,
 				67670A8D2C0D63F100E467C7 /* ofxInputField.cpp in Sources */,
 				6744F69A2C0E89E10049E66C /* Utilities.cpp in Sources */,
 			);
