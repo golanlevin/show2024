@@ -1,5 +1,5 @@
-// Written for Processing 2.0b7
-
+// Revised July 2024. Known to work with Processing v.4.3.
+// Centers canvas on 2nd monitor if available. 
 
 PImage 	 dumpsterimg;
 boolean  bUseDumpsterImg;
