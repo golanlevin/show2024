@@ -1,0 +1,5 @@
+ofxOpenCv
+ofxCv
+ofxGui
+ofxTensorFlow2
+ofxXmlSettings

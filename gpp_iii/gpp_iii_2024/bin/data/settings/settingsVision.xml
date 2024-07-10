@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<Vision>
+	<currFPS>25</currFPS>
+	<downsampleRatio>0.4375</downsampleRatio>
+	<maskThreshold>50</maskThreshold>
+	<sourceW>768</sourceW>
+	<sourceH>336</sourceH>
+	<sourceX>192</sourceX>
+	<sourceY>692</sourceY>
+	<bDoContrastStretch>1</bDoContrastStretch>
+	<targetAvgVal>112</targetAvgVal>
+	<contrastPow>0.491</contrastPow>
+	<bDoMedianFilter>1</bDoMedianFilter>
+	<medianW>3</medianW>
+	<resampDist>2.5</resampDist>
+	<contourKern>3</contourKern>
+	<trackerMaxDist>50</trackerMaxDist>
+	<trackerPersistence>40</trackerPersistence>
+	<minBlobAreaPct>0.014</minBlobAreaPct>
+	<maxBlobAreaPct>0.045</maxBlobAreaPct>
+	<batchSize>4</batchSize>
+	<processW>512</processW>
+	<processH>224</processH>
+	<leastAcceptableMovement>0.5</leastAcceptableMovement>
+	<whichDeviceID>0</whichDeviceID>
+	<whichVideoType>0</whichVideoType>
+	<whichCameraID>0</whichCameraID>
+	<bLoadRecordingsOnStart>1</bLoadRecordingsOnStart>
+</Vision>
