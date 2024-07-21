@@ -1,4 +1,6 @@
 ofxConvexHull
 ofxOpenCv
 ofxCv
+ofxGui
 ofxOsc
+ofxXmlSettings

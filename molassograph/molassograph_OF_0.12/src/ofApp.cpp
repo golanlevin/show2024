@@ -2,34 +2,26 @@
 
 /*
  
- Todo:
- - Add ofGUI for easy prototyping
- - Create settings file with camera name, Electron app filepath
- - Connect particle system to face metrics
- - Add floccular hair system
- - Make saved settings; switch when something 'happens'
- - Have preloaded faces when none are in view
- - Have particle wind affected by orientation of head
- - Have OF app launch electron app via command line
- 
- Related to Snow Mirror (2006) Danny Rozin
+ Predates but related to Snow Mirror (2006) Danny Rozin
  https://www.smoothware.com/danny/snowmirror.html
  
- Related to Gold (2008) Memo Akten
+ Predates but related to Gold (2008) Memo Akten
  https://www.memo.tv/works/gold/
  
  */
-/*
- defaults write com.apple.VideoEffectCamera ReactionsEnabled -bool false
- */
+
 
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofLogLevel(OF_LOG_ERROR);
-    lastOscUpdateTimeMs = ofGetElapsedTimeMillis();
-    setup2ndMonitor();
     
+    
+    ofSetVerticalSync(true);
+    bFullScreen = true;
+    ofSetFullscreen(bFullScreen);
+    ofSetWindowTitle("Molassograph (1998, 2024)");
     ofBackground(0,0,0,0);
+    ofHideCursor();
     
     camW = 1280;
     camH = 720;
@@ -47,68 +39,82 @@ void ofApp::setup(){
     gradientShader.load("shadersGL2/imageGradient");
     
     bFlipHorizontal = true;
-    bDrawFaceDebug = true;
     bDrawVideoDebug = false;
-    handyBool = true;
+    bToggledOscSource = false;
     
     faceSc = 0.0;
     faceTx = faceTy = 0;
     lastOscFaceFrameCount = 0;
+    nFramesSinceCameraFace = 0;
     setupImageBuffers();
+
+    setupSimulation();
+    setupHistogramEqualizer();
+    
+    bHideGui = false;
+    guiStartTime = ofGetElapsedTimef();
+    pauseStartTime = -99999;
+    ofxGuiSetDefaultWidth(256);
+    gui.setPosition(10, 520);
+    gui.setup("Molassograph");
+    gui.add(fpsSlider.setup("fpsSlider", 60.0, 0.0, 120.0));
+    gui.add(bUsingLiveCamera.setup("bUsingLiveCamera", true));
+    gui.add(bSimPaused.setup("bSimPaused", false));
+    gui.add(bPlayerPaused.setup("bPlayerPaused", false));
+    gui.add(particleFboAlpha.setup("particleFboAlpha", 255.0, 0.0,255.0));
+    
+    gui.add(haarNeigbors.setup("haarNeigbors", 4, 1, 16));
+    gui.add(haarScale.setup("haarScale", 1.12, 1.05, 1.35));
+    gui.add(haarRectBlur.setup("haarRectBlur", 0.60, 0.50, 1.0));
+    gui.add(gamma.setup("gamma", 2.2, MIN_GAMMA,MAX_GAMMA));
+    gui.add(faceDisplayPct.setup("faceDisplayPct", 0.55, MIN_FACE_PCT, MAX_FACE_PCT));
+    gui.add(bUseMetrics.setup("bUseMetrics", true));
+    
+    gui.add(lightingCentroid01.setup("lightDir", 0.5, 0.0, 1.0));
+    gui.add(windRangeDeg.setup("windRangeDeg", 70, 0, 90));
+    gui.add(windDitherDeg.setup("windDitherDeg", 15, 0, 30));
+    gui.add(windSpeedAvg.setup("windSpeedAvg", 2,   MIN_WIND_SPEED, MAX_WIND_SPEED));
+    gui.add(windSpeedStd.setup("windSpeedStd", 0.2, 0.0, 0.5));
+    gui.add(gradStrength.setup("gradStrength", 0.001, 0.0,MAX_GRAD_STRENGTH));
+    gui.add(eddyStrength.setup("eddyStrength", 0.00, -0.01, 0.01));
+    
+    gui.add(pointSize.setup("pointSize", 2.5, MIN_POINT_SIZE,MAX_POINT_SIZE));
+    gui.add(sparkleProb.setup("sparkleProb", 0.0, 0.0,MAX_SPARKLE_PROB));
+    gui.add(bShowMicroOSCFace.setup("bShowMicroOSCFace", false));
+    gui.add(bShowFaceMetrics.setup("bShowFaceMetrics", false));
+    
+    // Uncomment this when the program is close to done:
+    // gui.loadFromFile("settings.xml");
+    videoPlayer.setPaused((bool)bPlayerPaused);
     
     faceDataSource = FACE_FROM_OSC;
     haarFinder.setup("haarcascade_frontalface_default.xml");
-    haarFinder.setNeighbors(6);
-    haarFinder.setScaleHaar(1.2);
+    haarFinder.setNeighbors(haarNeigbors);
+    haarFinder.setScaleHaar(haarScale);
     haarUpdateCount = 0;
     nHaarFaces = 0;
     lastHaarFaceFrameCount = 0;
     haarW = camW/6;
     haarH = camH/4;
+    fpsBlur = (float) fpsSlider;
     
-    setupSimulation();
-    setupHistogramEqualizer();
+    gammaArray = new float[256];
+    for (int i=0; i<256; i++){
+        gammaArray[i] = powf(1.0 - i/255.0, gamma);
+    }
+    
+    lastOscUpdateTimeMs = ofGetElapsedTimeMillis(); // used for testing connection
+    lastOscCamFaceTimeSec = ofGetElapsedTimef();
 }
 
-//--------------------------------------------------------------
-void ofApp::setup2ndMonitor(){
-    bFullScreen = false;
-    ofAppGLFWWindow* win = dynamic_cast<ofAppGLFWWindow*>(ofGetWindowPtr());
-    if (win) {
-        int monitorCount = 0;
-        GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
-        
-        // Check if more than one monitor is available and the pointer is valid
-        if ((monitorCount>1) && monitors) {
-            GLFWwindow* glfwWindow = win->getGLFWWindow();
-            
-            int m0x, m0y;
-            const GLFWvidmode* monitor0Mode = glfwGetVideoMode(monitors[0]);
-            glfwGetMonitorPos(monitors[0], &m0x, &m0y);
-            int m1x, m1y;
-            const GLFWvidmode* monitor1Mode = glfwGetVideoMode(monitors[1]);
-            glfwGetMonitorPos(monitors[1], &m1x, &m1y);
-            
-            // Get the video mode of the second monitor
-            if (monitor1Mode) {
-                // Move the window to the second monitor
-                if (monitor1Mode->width < monitor1Mode->height){
-                    glfwSetWindowPos(glfwWindow, m1x, m1y);
-                    ofSetFrameRate(60.0);
-                    bFullScreen = true;
-                    ofSetFullscreen(bFullScreen);
-                    ofHideCursor();
-                }
-            }
-        }
-    }
-}
+
 
 //--------------------------------------------------------------
 void ofApp::setupImageBuffers(){
     // See: https://openprocessing.org/sketch/2219047
     
     camImgC3.allocate(camW, camH);
+    vidImgC3.allocate(camW, camH);
     camImgC1.allocate(camW, camH);
     camImgA1.allocate(camW, camH);
     grayImgC1.allocate(camW, camH);
@@ -156,15 +162,21 @@ void ofApp::setupImageBuffers(){
     fboOutput.readToPixels(fboOutputPixels);
     
     ofFboSettings fboSettings2;
-    fboSettings.numSamples = 4;
     fboSettings.width = dispW;
     fboSettings.height = dispH;
     fboSettings.internalformat = GL_RGB;
+    fboSettings.numSamples = 4; // MSAA
+    fboSettings.useStencil = false;
+    fboSettings.useDepth = false;
+    fboSettings.minFilter = GL_LINEAR;
+    fboSettings.maxFilter = GL_LINEAR;
+    
     fboDisplay.allocate(fboSettings);
     fboDisplay.begin();
     ofClear(0,0,0);
     fboDisplay.end();
     
+    verticalSum = new float[camW];
 }
 
 //--------------------------------------------------------------
@@ -185,29 +197,27 @@ void ofApp::setupOSC(){
 
 //--------------------------------------------------------------
 void ofApp::setupCamera(){
-    vidGrabber.setVerbose(true);
-    vidGrabberFrameCount = 0;
+    bUsingLiveCamera = true;
     
-    std::vector<ofVideoDevice> devices = vidGrabber.listDevices();
-    int deviceID = -1; // Default to an invalid device ID
-    for(int i=0; i<devices.size(); i++) {
-        if (devices[i].bAvailable) {
-            if (ofIsStringInString(devices[i].deviceName, "C920")) {
-                deviceID = devices[i].id; break;
-            }
-        } else {
-            ofLogNotice() << "Device " << devices[i].id << ": " << devices[i].deviceName << " - unavailable ";
-        }
-    }
-    if(deviceID != -1) {
-        vidGrabber.setDeviceID(deviceID);
-        vidGrabber.setup(camW, camH);
+    // Set up camera
+    videoGrabber.setVerbose(true);
+    std::vector<ofVideoDevice> devices = videoGrabber.listDevices();
+    int whichCameraID = 0;
+    if (devices[whichCameraID].bAvailable) {
+        videoGrabber.setDesiredFrameRate(30);
+        videoGrabber.setDeviceID(whichCameraID);
+        videoGrabber.setup(camW, camH);
     } else {
-        camW = 1280;
-        camH = 720;
-        vidGrabber.setDeviceID(0); // Fallback to default device
-        vidGrabber.setup(camW, camH);
+        videoGrabber.setDeviceID(0); // Fallback to default device
+        videoGrabber.setup(camW, camH);
     }
+        
+    // Also load player
+    videoPlayer.load("video/golan2.mov");
+    videoPlayer.setLoopState(OF_LOOP_NORMAL);
+    videoPlayer.setVolume(0.0);
+    videoPlayer.play();
+    
 }
 
 //--------------------------------------------------------------
@@ -215,10 +225,19 @@ void ofApp::setupSimulation(){
     PM.clear();
     VM.clear();
     UM.clear();
-    OM.clear();
     
-    float baseOrientation = ofDegToRad(-40); //ofRandom(TWO_PI);
-    for (int i=0; i<20000; i++){
+    randomFloats01A = new float[N_MOLASSOGRAPH_PARTICLES];
+    randomFloats01B = new float[N_MOLASSOGRAPH_PARTICLES];
+    randomFloats01G = new float[N_MOLASSOGRAPH_PARTICLES];
+    for (int i=0; i<N_MOLASSOGRAPH_PARTICLES; i++){
+        randomFloats01A[i] = ofRandomuf();
+        randomFloats01B[i] = ofRandomuf();
+        randomFloats01G[i] = myRandomGaussian(); //ofRandomf();
+    }
+    
+    // have direction of travel based on which side has more light
+    float baseOrientation = ofDegToRad(90);
+    for (int i=0; i<N_MOLASSOGRAPH_PARTICLES; i++){
         float px = ofRandom(0, fboW);
         float py = ofRandom(0, fboH);
         ofVec3f pt3;
@@ -226,13 +245,16 @@ void ofApp::setupSimulation(){
         PM.addVertex(pt3);
         
         ofVec3f op3;
-        float deviation = ofDegToRad(15)*ofRandom(-1,1);
+        float r = ofMap(randomFloats01A[i],0,1, -1,1);
+        float deviation = ofDegToRad(windDitherDeg)* r;
         float ori = baseOrientation + deviation;
-        float mag = ofRandom(1,3);
+        float wsStd = windSpeedStd * windSpeedAvg;
+        float mag = windSpeedAvg + (randomFloats01G[i] * wsStd);
+        mag = max(0.0f, mag);
         op3.set(ori, mag, 0);
         
-        float vxa = mag*cos(ori); //ofRandom(1.0);
-        float vya = mag*sin(ori); //ofRandom(1.0);
+        float vxa = mag*cos(ori);
+        float vya = mag*sin(ori);
         ofVec3f vta;
         vta.set(vxa,vya,0);
         VM.addVertex(vta);
@@ -242,37 +264,215 @@ void ofApp::setupSimulation(){
     }
 }
 
+// Function to approximate a Gaussian distribution
+float ofApp::myRandomGaussian() {
+    float sum = 0.0f;
+    int n = 5;
+    for (int i = 0; i < n; ++i) {
+        sum += ofRandomf();
+    }
+    return sum / sqrt((float)(n) / 3.0f);
+}
+
+//--------------------------------------------------------------
+void ofApp::incorporateFaceMetrics(){
+    if (faceDataSource == FACE_FROM_OSC && bUseMetrics) {
+        if (faces.size() > 0){
+            
+            float brows01 = faceMetrics[3];
+            float smile01 = MAX(faceMetrics[44], faceMetrics[45]);
+            float squint01 = MAX(faceMetrics[19], faceMetrics[20]);
+            float blink01 = MAX(faceMetrics[9], faceMetrics[10]);
+            float frown01 = MAX(faceMetrics[1], faceMetrics[2]);
+            float assym01 = (faceMetrics[28] - faceMetrics[29]);
+            float jawOpen = faceMetrics[25];
+            float pucker  = faceMetrics[38];
+            
+            float A = 0.92;
+            float B = 1.0-A;
+            
+            // link windSpeedAvg to brows01
+            float wsa = (float)(ofMap(powf(brows01,1.5),  0,1, MIN_WIND_SPEED,MAX_WIND_SPEED));
+            windSpeedAvg = A*windSpeedAvg + B*wsa;
+            windSpeedStd = 0.2;
+            
+            float sp = ofMap(pucker, 0,1, 0,MAX_SPARKLE_PROB);
+            sparkleProb = A*sparkleProb + B*sp;
+            
+            // link smile to faceDisplayPct
+            float fp = (float) (ofMap(powf(smile01,0.5),  0,1, MIN_FACE_PCT, MAX_FACE_PCT));
+            faceDisplayPct = A*faceDisplayPct + B*fp;
+            
+            // link pointSize to squint01
+            float ps = (float)(ofMap(powf(squint01,0.5),  0,1, MIN_POINT_SIZE,MAX_POINT_SIZE));
+            pointSize = A*pointSize + B*ps;
+            
+            // link eddyStrength to mouth assymetry
+            float es = (float)(assym01 * 0.006);
+            eddyStrength = A*eddyStrength + B*es;
+                      
+            // link gradStrength to frown01
+            gradStrength = (float)(ofMap(powf(frown01,0.5),  0,1, 0,MAX_GRAD_STRENGTH));
+            
+            // link gamma to squint01
+            gamma = (float)(ofMap(squint01,  0,1, MIN_GAMMA,MAX_GAMMA));
+            
+            windDitherDeg = ofMap(powf(jawOpen,0.5), 0,1, 20,0, true);
+            
+        }
+    } else {
+        // i.e. faceDataSource == FACE_FROM_HAAR
+        windSpeedAvg = ofMap( sin(ofGetElapsedTimef()/11.0), -1,1, MIN_WIND_SPEED,MAX_WIND_SPEED);
+        windSpeedStd = ofMap( sin(ofGetElapsedTimef()/17.0), -1,1, 0.05,0.20);
+        gamma        = ofMap( sin(ofGetElapsedTimef()/7.0 ), -1,1, MIN_GAMMA,MAX_GAMMA);
+        pointSize    = ofMap( sin(ofGetElapsedTimef()/19.0), -1,1, MIN_POINT_SIZE,MAX_POINT_SIZE);
+        sparkleProb  = ofMap( sin(ofGetElapsedTimef()/31.0), -1,1, 0,MAX_SPARKLE_PROB/2);
+        windDitherDeg= ofMap( sin(ofGetElapsedTimef()/23.0), -1,1, 12,18);
+        eddyStrength = sin(ofGetElapsedTimef()/23.0) * 0.001;
+        gradStrength = MAX_GRAD_STRENGTH*0.1;
+        
+        
+    }
+}
+
+
+//--------------------------------------------------------------
+void ofApp::updateWindOrientation(){
+
+    float val = ofMap(lightingCentroid01, 0.3,0.7, 0,1,true);
+    float valDeg = ofMap(val, 0,1,  90-windRangeDeg,90+windRangeDeg);
+    float baseOrientation = ofDegToRad(valDeg);
+    
+    // The app slows down a lot when computing Haar,
+    // so speed up the particles to compensate.
+    float speedFactor = 1.0;
+    if (faceDataSource == FACE_FROM_HAAR){
+        float fps = max(fpsCounter.getFps(), 30.0);
+        fpsBlur = 0.95*fpsBlur + 0.05*fps;
+        fpsBlur = ofClamp(fpsBlur, 10,120);
+        speedFactor = 120.0/fpsBlur;
+    }
+    
+    glm::vec3* Uptr = UM.getVerticesPointer();
+    for (int i=0; i<N_MOLASSOGRAPH_PARTICLES; i++){
+        float r = ofMap(randomFloats01A[i],0,1, -1,1);
+        float deviation = ofDegToRad(windDitherDeg)* r;
+        float ori = baseOrientation + deviation;
+        float wsStd = windSpeedStd * windSpeedAvg;
+        float mag = windSpeedAvg + (randomFloats01G[i] * wsStd);
+        mag = max(0.0f, mag);
+        Uptr[i].x = mag*cos(ori);
+        Uptr[i].y = mag*sin(ori);
+    }
+}
+
 //--------------------------------------------------------------
 void ofApp::update(){
-    bool bNewFrame = false;
-    if(vidGrabber.isInitialized()){
-       
-        vidGrabber.update();
-        bNewFrame = vidGrabber.isFrameNew();
-        if (bNewFrame){
-            processOSC();
-            handleFailure();
-            processHaar();
-            
-            computeHull();
-            createFaceComposite();
-            vidGrabberFrameCount++;
+    
+    if (bToggledOscSource == false){
+        if (ofGetElapsedTimef() > 10){
+            toggleOSCSource();
+            bToggledOscSource = true;
         }
     }
+    
+    // Acquire latest stored video frame. It might be paused.
+    bool bNewPlayerFrame = false;
+    if (videoPlayer.isInitialized()){
+        videoPlayer.setPaused((bool)bPlayerPaused);
+        if (!videoPlayer.isPaused()){
+            videoPlayer.update();
+            bNewPlayerFrame = videoPlayer.isFrameNew();
+            if (bNewPlayerFrame){
+                ofPixels vidPixelsC3 = videoPlayer.getPixels();
+                vidImgC3.setFromPixels(vidPixelsC3);
+            }
+        }
+    }
+    
+    // Acquire latest live camera image.
+    bool bNewGrabberFrame = false;
+    bool bNewGrabberFrameValid = false;
+    if (videoGrabber.isInitialized()){
+        videoGrabber.update();
+        bNewGrabberFrame = videoGrabber.isFrameNew();
+        if (bNewGrabberFrame){
+            ofPixels camPixelsC3 = videoGrabber.getPixels();
+            if((camPixelsC3.isAllocated()) &&
+               (camPixelsC3.size() > 0)){
+                camImgC3.setFromPixels(camPixelsC3);
+                bNewGrabberFrameValid = true;
+            } else {
+                camImgC3.set(0,0,0);
+            }
+        }
+    }
+    
+    if (bNewGrabberFrameValid){
+        acquireOscData();
+        float elapsedSinceLastOscFace = ofGetElapsedTimef() - lastOscCamFaceTimeSec;
+        
+        if (elapsedSinceLastOscFace > WAIT_FOR_OSC_FACE_DUR){
+            // There's no face detected by OSC;
+            // Switch to analyzing stored video with HAAR.
+            faceDataSource = FACE_FROM_HAAR;
+            bUsingLiveCamera = false;
+            bPlayerPaused = false;
+            //videoPlayer.setPaused(false);
+            
+            camImgC1 = vidImgC3;
+            if (bFlipHorizontal){ camImgC1.mirror(false,true);}
+            doHaarDetection();
+            
+        } else {
+            // OSC reports that faces exist.
+            faceDataSource = FACE_FROM_OSC;
+            bUsingLiveCamera = true;
+            bPlayerPaused = true;
+            //videoPlayer.setPaused(true);
+            
+            computeHull();
+            camImgC1 = camImgC3;
+            if (bFlipHorizontal){ camImgC1.mirror(false,true);}
+        }
+        
+        incorporateFaceMetrics();
+        createFaceComposite();
+        computeVerticalSum();
+        updateWindOrientation();
+    }
+    
     updateSimulation();
+    updateGui();
 }
 
 
 
 //--------------------------------------------------------------
-void ofApp::processHaar(){
+void ofApp::doHaarDetection(){
+    
     if (faceDataSource == FACE_FROM_HAAR){
+        
+        // Adjust haarScale, our primary tool for affecting framerate in FACE_FROM_HAAR mode.
+        float targetFPS = 30.0;
+        float actualFPS = fpsSlider;
+        if ((actualFPS - targetFPS) < -1.0) {
+            haarScale = (float)(haarScale + 0.0001);
+        } else if ((actualFPS - targetFPS) > 1.0) {
+            haarScale = (float)(haarScale - 0.0001);
+        } haarScale = ofClamp(haarScale, 1.05, 1.35);
+         
+        // Do the actual detection.
+        haarFinder.setNeighbors(haarNeigbors);
+        haarFinder.setScaleHaar(haarScale);
+        
         haarUpdateCount++;
         haarFinder.findHaarObjects(camImgC1);
         nHaarFaces = haarFinder.blobs.size();
         if (nHaarFaces > 0){
             lastHaarFaceFrameCount = haarUpdateCount;
         }
+        
     } else {
         haarFinder.blobs.clear();
         nHaarFaces = 0;
@@ -283,15 +483,37 @@ void ofApp::processHaar(){
 //--------------------------------------------------------------
 void ofApp::computeHull(){
     hull.clear();
-    if (faces.size() > 0){
-        hullInputPoints.clear();
-        for (int i=0; i<N_FACE_LANDMARKS; i++){
-            ofVec2f vec = faces[0].keypoints[i];
-            ofPoint pt;
-            pt.set(vec.x, vec.y);
-            hullInputPoints.push_back(pt);
+    if (faceDataSource == FACE_FROM_OSC){
+        if (faces.size() > 0){
+            hullInputPoints.clear();
+            for (int i=0; i<N_FACE_LANDMARKS; i++){
+                ofVec2f vec = faces[0].keypoints[i];
+                ofPoint pt;
+                pt.set(vec.x, vec.y);
+                hullInputPoints.push_back(pt);
+            }
+            hull = convexHull.getConvexHull(hullInputPoints);
+            
+            // Compute bounding box of hull
+            int nHullPts = hull.size();
+            if (nHullPts > 0){
+                float bx = 99999;
+                float by = 99999;
+                float br = -99999;
+                float bb = -99999;
+                for (int i=0; i<nHullPts; i++){
+                    ofPoint pt = hull[i];
+                    if (pt.x < bx){ bx = pt.x; }
+                    if (pt.y < by){ by = pt.y; }
+                    if (pt.x > br){ br = pt.x; }
+                    if (pt.y > bb){ bb = pt.y; }
+                }
+                faceBbox.x = bx;
+                faceBbox.y = by;
+                faceBbox.width = (br-bx);
+                faceBbox.height = (bb-by);
+            }
         }
-        hull = convexHull.getConvexHull(hullInputPoints);
     }
 }
 
@@ -300,19 +522,52 @@ void ofApp::computeHull(){
 void ofApp::drawVideoDebug(){
     if (bDrawVideoDebug){
         
-        float cw = 320;
+        float cw = 320.0f;
         float ch = cw * ((float)camH/(float)camW);
+        ofFill();
         ofSetColor(255);
         
         ofPushMatrix();
         ofTranslate(0,0);
-        vidGrabber.draw(0,0,cw,ch);
-        maskImgC1.draw(cw,0,cw,ch);
-        camImgC1.draw(0,ch, cw,ch);
-        camImgA1.draw(cw,ch, cw,ch);
-        grayImgC1.draw(0,ch*2, cw,ch);
-        maskedCamC1.draw(cw,ch*2, cw,ch);
-        maskInvC1.draw(0,ch*3,cw,ch);
+        videoGrabber.draw(0, 0,   cw,ch);
+        maskImgC1.draw   (cw,0,   cw,ch);
+        camImgC1.draw    (0, ch,  cw,ch);
+        camImgA1.draw    (cw,ch,  cw,ch);
+        grayImgC1.draw   (0, ch*2,cw,ch);
+        maskedCamC1.draw (cw,ch*2,cw,ch);
+        maskInvC1.draw   (0, ch*3,cw,ch);
+        vidImgC3.draw    (0, ch*4,cw,ch);
+        
+        float tx = 10;
+        float ty = ch-10;
+        ofPushMatrix();
+        ofTranslate(tx,ty);
+        ofSetColor(255,160,0);
+        ofDrawBitmapString("videoGrabber",  0,   0);
+        ofDrawBitmapString("maskImgC1",     cw,  0);
+        ofDrawBitmapString("camImgC1",      0,   ch);
+        ofDrawBitmapString("camImgA1",      cw,  ch);
+        ofDrawBitmapString("grayImgC1",     0,   ch*2);
+        ofDrawBitmapString("maskedCamC1",   cw,  ch*2);
+        ofDrawBitmapString("maskInvC1",     0,   ch*3);
+        ofPopMatrix();
+        
+        // mskW
+        ofPushMatrix();
+        ofTranslate(cw,ch*2);
+        ofScale(cw/camW);
+        ofNoFill();
+        ofSetColor(255,160,0);
+        ofDrawRectangle(faceBbox);
+        drawDebugHull();
+
+        ofSetColor(255,160,0);
+        for (int x=0; x<camW; x++){
+            float val = verticalSum[x]*255.0;
+            ofDrawLine(x,0,x,val);
+        }
+        
+        ofPopMatrix();
         ofPopMatrix();
     }
 }
@@ -321,7 +576,7 @@ void ofApp::drawVideoDebug(){
 void ofApp::createFaceComposite(){
     
     int blurDim = 17; //1 + 2*((int)(mouseX/10));
-    float faceDisplayPercent = 0.55; //1.15;
+    float faceDisplayPercent = 0.55;
     bool bMadeFaceMask = false;
     
     if (faceDataSource == FACE_FROM_OSC){
@@ -334,7 +589,7 @@ void ofApp::createFaceComposite(){
         int nHullPts = hull.size();
         if (nHullPts > 0){
             bMadeFaceMask = true;
-            faceDisplayPercent = 0.55; //ofMap(mouseX,0,ofGetWidth(),0,1);//0.55 * 
+            faceDisplayPercent = faceDisplayPct;
             float hullSpacing = mskW/40.0;
             float hullCircR = 3.0;
             
@@ -393,7 +648,7 @@ void ofApp::createFaceComposite(){
         nHaarFaces = haarFinder.blobs.size();
         if (nHaarFaces > 0){
             bMadeFaceMask = true;
-            faceDisplayPercent = 0.66;
+            faceDisplayPercent = faceDisplayPct * 1.2;
             
             int largestHaarIndex = 0;
             int largestHaarWidth = 0;
@@ -408,24 +663,34 @@ void ofApp::createFaceComposite(){
             ofRectangle hr = haarFinder.blobs[largestHaarIndex].boundingRect;
             float haarFactorH = 1.20;
             float haarFactorW = 0.70;
-            float tx = hr.x + hr.width*0.5;
-            float ty = hr.y + hr.height*0.4;
-            faceTx = 0.9*faceTx + 0.1*tx;
-            faceTy = 0.9*faceTy + 0.1*ty;
+            float haarFaceCenterY = 0.50;
+            
+            float tx = hr.x + hr.width*0.50;
+            float ty = hr.y + hr.height*haarFaceCenterY;
+            
+            float A = haarRectBlur;
+            float B = 1.0-A;
+            faceTx = A*faceTx + B*tx;
+            faceTy = A*faceTy + B*ty;
             float hw = hr.width * haarFactorW;
             float hh = hr.height * haarFactorH;
-            haarW = 0.9*haarW + 0.1*hw;
-            haarH = 0.9*haarH + 0.1*hh;
+            haarW = A*haarW + B*hw;
+            haarH = A*haarH + B*hh;
             float fs = (imgH*faceDisplayPercent)/haarH;
-            faceSc = 0.9*faceSc + 0.1*fs;
+            faceSc = A*faceSc + B*fs;
             facePercent = MIN(1.0, haarH/camH);
             blurDim = ((int)(facePercent * 16.0 * (camH/720.0) ))*2+1;
             blurDim = MAX(3,blurDim);
             
+            faceBbox.x = (faceTx - haarW*0.50);
+            faceBbox.y = (faceTy - haarH*haarFaceCenterY);
+            faceBbox.width = haarW;
+            faceBbox.height = haarH;
+            
             ofFill();
             ofSetColor(255);
             ofPushMatrix();
-            ofTranslate(tx,ty);
+            ofTranslate(faceTx,faceTy);//tx,ty);
             ofDrawEllipse(0,0,haarW,haarH);
             ofPopMatrix();
         }
@@ -454,16 +719,6 @@ void ofApp::createFaceComposite(){
     maskInvC1.invert();
     maskInvBigC1.scaleIntoMe(maskInvC1, CV_INTER_LINEAR);
     
-    // Create a masked image of the camera
-    ofPixels& camPixelsC3 = vidGrabber.getPixels();
-    if(camPixelsC3.isAllocated() && (camPixelsC3.size() > 0)){
-        camImgC3.setFromPixels(camPixelsC3);
-    } else { camImgC3.set(0,0,0); }
-    camImgC1 = camImgC3;
-    if (bFlipHorizontal){
-        camImgC1.mirror(false,true);
-    }
-    // camImgC1.blurGaussian(7);
     camImgA1.scaleIntoMe(maskImgC1, CV_INTER_LINEAR);
     camImgA1 *= camImgC1;
     if (bMadeFaceMask){
@@ -486,15 +741,18 @@ void ofApp::createFaceComposite(){
     ofEnableBlendMode(OF_BLENDMODE_ALPHA);
     float alphaBase = 64;
     float faceAlpha = alphaBase;
+    
     int nFaces = (faceDataSource==FACE_FROM_HAAR)?nHaarFaces:nOscFaces;
     if (nFaces == 0){
         float nFramesToFade = 120;
-        int nFramesSinceFace = (faceDataSource == FACE_FROM_HAAR) ?
+        int nfsf = (faceDataSource == FACE_FROM_HAAR) ?
         (haarUpdateCount - lastHaarFaceFrameCount) :
         (oscUpdateCount  - lastOscFaceFrameCount);
-        nFramesSinceFace = MIN(nFramesSinceFace, nFramesToFade);
-        faceAlpha = alphaBase * pow(nFramesSinceFace/nFramesToFade, 2.0);
+        nfsf = MIN(nfsf, nFramesToFade);
+        faceAlpha = alphaBase * pow(nfsf/nFramesToFade, 2.0);
     }
+    
+    
     ofSetColor(255,255,255, faceAlpha);
     maskedCamC1.draw(0,0,camW,camH);
     ofSetColor(MIDDLE_GRAY); // fill in periphery
@@ -532,6 +790,49 @@ void ofApp::createFaceComposite(){
     // fboOutput.getTexture().getTextureData();
     // long now = ofGetElapsedTimeMicros();
     // printf("elapsed = %d\n", (int) (now-then));
+}
+
+void ofApp::computeVerticalSum(){
+    for (int i=0; i<camW; i++){ verticalSum[i] = 0.0f; }
+    unsigned char* pix = maskedCamC1.getPixels().getData();
+    
+    int x0 = (int)(faceBbox.x);
+    int x1 = (int)(faceBbox.x + faceBbox.width);
+    int y0 = (int)(faceBbox.y);
+    int y1 = (int)(faceBbox.y + faceBbox.height);
+    x0 = ofClamp(x0, 0, camW-1); x1 = ofClamp(x1, 0, camW-1);
+    y0 = ofClamp(y0, 0, camH-1); y1 = ofClamp(y1, 0, camH-1);
+    if ((y1 > y0) && (x1 > x0)){
+
+        // Calc vertical sum;
+        for (int x=x0; x<x1; x++){
+            verticalSum[x] = 0.0f;
+            for (int y=y0; y<y1; y++){
+                int index = y*camW + x;
+                unsigned char val = pix[index];
+                verticalSum[x] += (float) val;
+            }
+            verticalSum[x] /= (float)(y1-y0);
+            verticalSum[x] /= 255.0;
+            verticalSum[x] = powf(verticalSum[x],2.0);
+        }
+        
+        // Find 1D weighted centroid
+        float val = 0;
+        float sum = 0;
+        for (int x=x0; x<x1; x++){
+            sum += verticalSum[x];
+            val += x * verticalSum[x];
+        }
+        if (sum > 0){
+            val /= sum;
+            val = ofMap(val, x0,x1, 0,1);
+            val = ofClamp(val, 0,1);
+            lightingCentroid01 = (float) val;
+        }
+    }
+    
+    
 }
 
 
@@ -672,7 +973,7 @@ void ofApp::drawHistogram(){
 
 //--------------------------------------------------------------
 void ofApp::drawDebugHull(){
-    int nHullPts = hull.size();
+    int nHullPts = (int) hull.size();
     if (nHullPts > 0){
         ofNoFill();
         ofSetLineWidth(1.0);
@@ -687,102 +988,79 @@ void ofApp::drawDebugHull(){
 }
 
 //--------------------------------------------------------------
+void ofApp::updateGui(){
+    fpsSlider = (float) fpsCounter.getFps();
+    float now = ofGetElapsedTimef();
+    float elapsed = now - guiStartTime;
+    if ((bHideGui == false) && (elapsed > DISPLAY_GUI_DUR_S)){
+        bHideGui = true;
+    }
+    
+    if ((bHideGui == false) || (bDrawVideoDebug == true)){
+        ofShowCursor();
+    } else { /*  if (bFullScreen ){  */
+        ofHideCursor();
+    }
+}
+
+//--------------------------------------------------------------
 // Save some configs of different params
 // When there's lots of motion, or face metric change, switch
 
 void ofApp::updateSimulation(){
-    glm::vec3* Pptr = PM.getVerticesPointer();
-    glm::vec3* Vptr = VM.getVerticesPointer();
-    glm::vec3* Uptr = UM.getVerticesPointer();
-    
-    const int nVerts = PM.getNumVertices();
-    const int W = fboW;
-    const int H = fboH;
-    
-    float my = 2.2; //ofMap(mouseY, 0,ofGetHeight(), 0,4); //4);
-    
-    float smile01 = 0;
-    float squint01 = 0;
-    float brows01 = 0;
-    float blink01 = 0;
-    if (faceDataSource == FACE_FROM_OSC){
-        smile01 = MAX(faceMetrics[44], faceMetrics[45]);
-        squint01 = MAX(faceMetrics[19], faceMetrics[20]);
-        blink01 = MAX(faceMetrics[9], faceMetrics[10]);
-        brows01 = faceMetrics[3];
-    }
-    // my = 3.0*(1-brows01);
-   // my += 1.0*squint01;
-   // my -= 2.0*pow(blink01, 0.5);
-  
-    for (int i=0; i<nVerts; i++){
-        int px = (int) ofClamp(roundf(Pptr[i].x),0,W-1);
-        int py = (int) ofClamp(roundf(Pptr[i].y),0,H-1);
-        int pIndex = (py*fboW + px) * 3;
-        float gx = fboOutputPixels[pIndex  ]-MIDDLE_GRAY;
-        float gy = fboOutputPixels[pIndex+1]-MIDDLE_GRAY;
-        float gm = fboOutputPixels[pIndex+2];
+    if (!bSimPaused){
         
-        // gm = 2*MAX(0,gm-MIDDLE_GRAY);
-        gm = pow(1-gm/255.0,my);
+        glm::vec3* Pptr = PM.getVerticesPointer();
+        glm::vec3* Vptr = VM.getVerticesPointer();
+        glm::vec3* Uptr = UM.getVerticesPointer();
         
-        Vptr[i].x = Uptr[i].x * gm ;//+ gx*my - gy*my*0.1;
-        Vptr[i].y = Uptr[i].y * gm ;//+ gy*my + gx*my*0.1;
+        const int nVerts = PM.getNumVertices();
+        const int W = fboW;
+        const int H = fboH;
         
-        // Integrate
-        Pptr[i] += Vptr[i];
-        
-        // Loop around
-        if (Pptr[i].x >= W){
-            Pptr[i].x -= W;
-        } else if (Pptr[i].x < 0){
-            Pptr[i].x += W;
+        for (int i=0; i<256; i++){
+            gammaArray[i] = powf(1.0f - i/255.0, gamma);
         }
-        if (Pptr[i].y >= H){
-            Pptr[i].y -= H;
-        } else if (Pptr[i].y < 0){
-            Pptr[i].y += H;
+        
+        for (int i=0; i<nVerts; i++){
+            int px = (int) ofClamp(roundf(Pptr[i].x),0,W-1);
+            int py = (int) ofClamp(roundf(Pptr[i].y),0,H-1);
+            int pIndex = (py*fboW + px) * 3;
+            float gx = fboOutputPixels[pIndex  ]-128;
+            float gy = fboOutputPixels[pIndex+1]-128;
+            float gm = gammaArray[ fboOutputPixels[pIndex+2] ];
+            
+            Vptr[i].x = (Uptr[i].x * gm) + gx*gradStrength - gy*eddyStrength;
+            Vptr[i].y = (Uptr[i].y * gm) + gy*gradStrength + gx*eddyStrength;
+            
+            // Integrate
+            Pptr[i] += Vptr[i];
+            
+            // Loop around
+            if (Pptr[i].x >= W){
+                Pptr[i].x -= W;
+            } else if (Pptr[i].x < 0){
+                Pptr[i].x += W;
+            }
+            if (Pptr[i].y >= H){
+                Pptr[i].y -= H;
+            } else if (Pptr[i].y < 0){
+                Pptr[i].y += H;
+            }
+        }
+    } else if (bSimPaused){
+        float now = ofGetElapsedTimef();
+        float elapsed = now - pauseStartTime;
+        if (elapsed > PAUSE_DUR_S){
+            bSimPaused = false;
         }
     }
-
-    
 }
 
-//--------------------------------------------------------------
-void ofApp::handleFailure(){
-    
-    
-    // HANDLE LACK OF OSC MESSAGES
-    // If no OSC messages have been received for a while,
-    //    The sender may have died, disconnected or failed to launch;
-    //    -> Try using a local facetracker.
-    // Else if an OSC message has been received very recently,
-    //    -> Switch back to using the OSC face tracker
-    uint64_t now = ofGetElapsedTimeMillis();
-    const int durationToAbandonOSC = (1000*2); // milliseconds
-    int elapsedSinceLastOscMsg = (int)(now - lastOscUpdateTimeMs);
-    if (elapsedSinceLastOscMsg > durationToAbandonOSC){
-        faceDataSource = FACE_FROM_HAAR;
-        faces.clear();
-    } else {
-        faceDataSource = FACE_FROM_OSC;
-    }
-    
-    // HANDLE LACK OF FACES
-    // If faces were found in this frame
-    //    -> Use the current face data
-    // If no faces have been found in a while (by any method)
-    //    -> Use a stored video
-    // Else if faces were found a few frames ago,
-    //    -> Continue to use the most recent face data
-    int nFramesSinceOscFace  = oscUpdateCount - lastOscFaceFrameCount;
-    int nFramesSinceHaarFace = haarUpdateCount - lastHaarFaceFrameCount;
-    
-    
-}
+
 
 //--------------------------------------------------------------
-void ofApp::processOSC(){
+void ofApp::acquireOscData(){
     if (!oscReceiver.isListening()) {return;}
     while(oscReceiver.hasWaitingMessages()){
         ofxOscMessage m;
@@ -800,6 +1078,7 @@ void ofApp::processOSC(){
                     nOscFaces = m.getArgAsInt(0);
                     if (nOscFaces > 0){
                         lastOscFaceFrameCount = oscUpdateCount;
+                        lastOscCamFaceTimeSec = ofGetElapsedTimef();
                     }
                 }
                     
@@ -837,50 +1116,36 @@ void ofApp::processOSC(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     fpsCounter.newFrame();
-    ofBackground(0); //MIDDLE_GRAY);
+    ofBackground(0);
     
     ofSetColor(255);
     scaledFboRect = ofRectangle(0,0, fboW, fboH);//ofGetWidth(), ofGetHeight()); //fboW/2,fboH/2);
-    if (handyBool){
-        //fboOutput.draw( scaledFboRect );
-    }
     
+    drawSimulation();
+    drawVideoDebug();
+    drawDebugOSC();
+    
+    ofSetColor(255);
+    // fboOutput.draw(0, 0);
+    
+
     
     // ofSetColor(255);
     // camImgC1.draw(0,0, camW/2, camH/2);
     // compC1.draw(0,camH/2, imgW, imgH);
-    drawVideoDebug();
+    // drawHistogram();
     
-    drawSimulation();
     
-    if (bDrawFaceDebug){
-        drawDebugOSC();
-        
-        ofNoFill();
-        ofSetColor(255);
-        for(int i = 0; i < haarFinder.blobs.size(); i++) {
-            ofRectangle cur = haarFinder.blobs[i].boundingRect;
-            ofDrawRectangle(cur.x, cur.y, cur.width, cur.height);
-        }
-        
-        // drawHistogram();
-        // drawDebugHull();
+    
+    
+    if(!bHideGui){
+        gui.draw();
     }
-    
-    ofFill();
-    ofSetColor(255);
-    ofDrawBitmapStringHighlight("FPS: " + ofToString(fpsCounter.getFps()),50,20);
-    
+      
 }
 
 //--------------------------------------------------------------
 void ofApp::drawSimulation(){
-    
-    float squint01 = 0;
-    if (faceDataSource == FACE_FROM_OSC){
-        squint01 = MAX(faceMetrics[19],faceMetrics[20]);
-    }
-    squint01 = ofMap(mouseX,0,ofGetWidth(),0,1);
     
     fboDisplay.begin();
     // ofClear(0,0,40, 10);
@@ -890,7 +1155,10 @@ void ofApp::drawSimulation(){
     float sc = dispW/fboW;
     
     ofNoFill();
-    glPointSize(2.5); //ofMap(mouseX,0,ofGetWidth(),0,4));
+    glPointSize(pointSize);
+    ofEnableAntiAliasing();
+    glEnable(GL_POINT_SMOOTH);
+    glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
     ofEnableBlendMode(OF_BLENDMODE_ADD);
     ofSetColor(255,128);
     ofPushMatrix();
@@ -907,7 +1175,8 @@ void ofApp::drawSimulation(){
         glm::vec3* Pptr = PM.getVerticesPointer();
         glm::vec3* Vptr = VM.getVerticesPointer();
         int nVerts = PM.getNumVertices();
-        int nVertsFrac = (int)(nVerts * 0.1);
+        int nVertsFrac = (int)(nVerts * sparkleProb);
+        float sparkLength = 10.0;
         
         for (int i=0; i<nVerts; i++){
             bool bDo = false;
@@ -924,8 +1193,8 @@ void ofApp::drawSimulation(){
                 float dx = Vptr[ri].x;
                 float dy = Vptr[ri].y;
                 float dh = sqrt(dx*dx+dy*dy);
-                dx = 3*dx/dh;
-                dy = 3*dy/dh;
+                dx = sparkLength*dx/dh;
+                dy = sparkLength*dy/dh;
                 ofDrawLine(px-dx,py-dy, px+dx,py+dy);
             }
         }
@@ -936,8 +1205,12 @@ void ofApp::drawSimulation(){
     fboDisplay.end();
     float dispWf = ofGetHeight() * (float)dispW/(float)dispH;
     scaledFboRect = ofRectangle(0,0,dispWf,ofGetHeight());
+    
+    ofSetColor(255,255,255,particleFboAlpha); 
     fboDisplay.draw( scaledFboRect );
     
+    
+
     /*
     fboOutput.begin();
      
@@ -969,34 +1242,37 @@ void ofApp::drawSimulation(){
     scaledFboRect = ofRectangle(0,0,fboW/2,fboH/2);
     fboOutput.draw( scaledFboRect );
      */
+    
 }
 
 //--------------------------------------------------------------
 void ofApp::drawDebugOSC(){
-    bool bShowFacePoints = true;
-    bool bShowFaceMetrics = false;
-    
-    ofNoFill();
-    ofSetColor(255);
-    ofSetLineWidth(1);
-    
-    if (bShowFacePoints){
-        // Draw face landmarks. Somehow, drawing these landmarks
-        // (even if they're offscreen) speeds up everything by 10fps
-        ofFill();
-        ofSetColor(255,255,255,128);
-        for (int f=0; f<faces.size(); f++){
-            for (int j = 0; j < N_FACE_LANDMARKS; j++){
-                ofVec2f p = faces[f].keypoints[j];
-                float px = p.x - faceTx;
-                float py = p.y - faceTy;
-                ofDrawRectangle(20 + 0.05*px, 20 +0.05*py, 1,1);
-                //  ofDrawRectangle(px,py, 1,1);
+    if (bShowMicroOSCFace){
+        
+        bool bShowFacePoints = true;
+        
+        ofNoFill();
+        ofSetColor(255);
+        ofSetLineWidth(1);
+        
+        if (bShowFacePoints){
+            // Draw face landmarks. Somehow, drawing these landmarks
+            // (even if they're offscreen) speeds up everything by 10fps
+            ofFill();
+            ofSetColor(255,255,255,128);
+            for (int f=0; f<faces.size(); f++){
+                for (int j = 0; j < N_FACE_LANDMARKS; j++){
+                    ofVec2f p = faces[f].keypoints[j];
+                    float px = p.x - faceTx;
+                    float py = p.y - faceTy;
+                    ofDrawRectangle(20 + 0.05*px, 20 +0.05*py, 1,1);
+                    //  ofDrawRectangle(px,py, 1,1);
+                }
             }
         }
     }
-    
-    if (bShowFaceMetrics){ 
+        
+    if (bShowFaceMetrics){
         // Draw face metrics
         ofSetColor(255);
         if (faces.size() > 0){
@@ -1008,6 +1284,9 @@ void ofApp::drawDebugOSC(){
             for (int i=1; i<N_FACE_METRICS; i++){
                 float val = faceMetrics[i];
                 float vx = ofMap(val, 0,1, vx0,vx1);
+                ofSetColor(64);
+                ofDrawLine(vx0, ty-2, vx1, ty-2);
+                ofSetColor(255);
                 ofDrawLine(vx0, ty-2, vx, ty-2);
                 ty+=dy;
             }
@@ -1017,24 +1296,37 @@ void ofApp::drawDebugOSC(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key == 'b'){
-        handyBool = !handyBool;
-    } else if ((key == 'D') || (key == 'd')){
-        bDrawFaceDebug = !bDrawFaceDebug;
-    } else if ((key == 'V') || (key == 'v')){
+
+    if ((key == 'D') || (key == 'd')){
         bDrawVideoDebug = !bDrawVideoDebug;
+        if (bDrawVideoDebug){
+            bHideGui = false;
+            guiStartTime = ofGetElapsedTimef();
+        }
     } else if (key == 'X'){
         toggleOSCSource();
     } else if (key == 'F'){
         bFullScreen = !bFullScreen;
         ofSetFullscreen(bFullScreen);
-        if (bFullScreen){
-            ofHideCursor();
-        } else {
-            ofShowCursor();
+    } else if (key == 'S'){
+        gui.saveToFile("settings.xml");
+    } else if(key == 'L'){
+        gui.loadFromFile("settings.xml");
+    } else if ((key == 'G') || (key == 'g')){
+        bHideGui = !bHideGui;
+        if (bHideGui == false){
+            guiStartTime = ofGetElapsedTimef();
         }
+    } else if (key == ' '){
+        bSimPaused = !bSimPaused;
+        if (bSimPaused){
+            pauseStartTime = ofGetElapsedTimef();
+        }
+    } else if (key == 'O'){
+        bShowMicroOSCFace = !bShowMicroOSCFace;
     }
 }
+
 
 //--------------------------------------------------------------
 void ofApp::toggleOSCSource(){
@@ -1045,13 +1337,23 @@ void ofApp::toggleOSCSource(){
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseMoved(int x, int y ){}
-void ofApp::mouseDragged(int x, int y, int button){}
-void ofApp::mousePressed(int x, int y, int button){}
-void ofApp::mouseReleased(int x, int y, int button){}
+void ofApp::mouseMoved(int x, int y ){
+    if (bHideGui == false){
+        guiStartTime = ofGetElapsedTimef();
+    }
+}
+void ofApp::mouseDragged(int x, int y, int button){
+}
+void ofApp::mousePressed(int x, int y, int button){
+}
+void ofApp::mouseReleased(int x, int y, int button){
+}
+
+
 void ofApp::mouseEntered(int x, int y){}
 void ofApp::mouseExited(int x, int y){}
 void ofApp::windowResized(int w, int h){}
 void ofApp::gotMessage(ofMessage msg){}
 void ofApp::dragEvent(ofDragInfo dragInfo){}
 void ofApp::keyReleased(int key){}
+

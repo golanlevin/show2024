@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<group>
+	<aFloat>0.5</aFloat>
+	<anInt>5</anInt>
+	<aToggle>1</aToggle>
+	<sparkleProb>0</sparkleProb>
+</group>
+<Molassograph>
+	<fpsSlider>119.915</fpsSlider>
+	<bUsingLiveCamera>1</bUsingLiveCamera>
+	<bIsUsingOSC>0</bIsUsingOSC>
+	<bSimPaused>0</bSimPaused>
+	<bPlayerPaused>1</bPlayerPaused>
+	<haarBlur>0.6</haarBlur>
+	<haarNeigbors>4</haarNeigbors>
+	<haarScale>1.15</haarScale>
+	<gamma>2.2</gamma>
+	<faceDisplayPct>0.55</faceDisplayPct>
+	<bUseMetrics>1</bUseMetrics>
+	<lightDir>0.567426</lightDir>
+	<windRangeDeg>70</windRangeDeg>
+	<windDitherDeg>15</windDitherDeg>
+	<windSpeedAvg>2</windSpeedAvg>
+	<windSpeedStd>0.2</windSpeedStd>
+	<gradStrength>0.001</gradStrength>
+	<eddyStrength>0.001</eddyStrength>
+	<pointSize>2.5</pointSize>
+	<sparkleProb>0</sparkleProb>
+	<bShowMicroOSCFace>0</bShowMicroOSCFace>
+</Molassograph>
