@@ -39,7 +39,7 @@ async function preload() {
 	let FilesetResolver = mediapipe_module.FilesetResolver;
 	const vision = await FilesetResolver.forVisionTasks(
 		"./mediapipe-0.10.12/tasks-vision@0.10.12/wasm"
-		/* "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.13/wasm" */
+		/* https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/" */
 	);
 	myFaceLandmarker = await FaceLandmarker.createFromOptions(vision, {
 		numFaces: trackingConfig.maxNumFaces,
